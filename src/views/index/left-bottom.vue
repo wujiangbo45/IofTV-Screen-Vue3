@@ -1,228 +1,180 @@
-<script setup lang="ts">
-import { leftBottom } from "@/api";
-import SeamlessScroll from "@/components/seamless-scroll";
-import { computed, onMounted, reactive } from "vue";
-import { useSettingStore } from "@/stores";
-import { storeToRefs } from "pinia";
-import EmptyCom from "@/components/empty-com";
-import { ElMessage } from "element-plus";
-
-const settingStore = useSettingStore();
-const { defaultOption, indexConfig } = storeToRefs(settingStore);
-const state = reactive<any>({
-  list: [],
-  defaultOption: {
-    ...defaultOption.value,
-    singleHeight: 256,
-    limitScrollNum: 4,
-  },
-  scroll: true,
-});
-
-const getData = () => {
-  leftBottom( { limitNum: 20 })
-    .then((res) => {
-      console.log("左下--设备提醒", res);
-      if (res.success) {
-        state.list = res.data.list;
-      } else {
-        ElMessage({
-          message: res.msg,
-          type: "warning",
-        });
-      }
-    })
-    .catch((err) => {
-      ElMessage.error(err);
-    });
-};
-const addressHandle = (item: any) => {
-  let name = item.provinceName;
-  if (item.cityName) {
-    name += "/" + item.cityName;
-    if (item.countyName) {
-      name += "/" + item.countyName;
-    }
-  }
-  return name;
-};
-const comName = computed(() => {
-  if (indexConfig.value.leftBottomSwiper) {
-    return SeamlessScroll;
-  } else {
-    return EmptyCom;
-  }
-});
-onMounted(() => {
-  getData();
-});
-</script>
-
 <template>
-  <div class="left_boottom_wrap beautify-scroll-def" :class="{ 'overflow-y-auto': !indexConfig.leftBottomSwiper }">
-    <component
-      :is="comName"
-      :list="state.list"
-      v-model="state.scroll"
-      :singleHeight="state.defaultOption.singleHeight"
-      :step="state.defaultOption.step"
-      :limitScrollNum="state.defaultOption.limitScrollNum"
-      :hover="state.defaultOption.hover"
-      :singleWaitTime="state.defaultOption.singleWaitTime"
-      :wheel="state.defaultOption.wheel"
-    >
-      <ul class="left_boottom">
-        <li class="left_boottom_item" v-for="(item, i) in state.list" :key="i">
-          <span class="orderNum doudong">{{ i + 1 }}</span>
-          <div class="inner_right">
-            <div class="dibu"></div>
-            <div class="flex">
-              <div class="info">
-                <span class="labels">设备ID：</span>
-                <span class="text-content zhuyao doudong wangguan"> {{ item.gatewayno }}</span>
-              </div>
-              <div class="info">
-                <span class="labels">时间：</span>
-                <span class="text-content" style="font-size: 12px"> {{ item.createTime }}</span>
-              </div>
-            </div>
+  <div class="panel">
+    <!-- 上方 cube -->
+    <div class="cube-row">
+      <CubePercent
+        v-for="item in cubes"
+        :key="item.id"
+        :id="item.id"
+        :percent="item.percent"
+        :label="item.label"
+        :size="80"
+        @hover="onHover"
+        @leave="onLeave"
+      />
+    </div>
 
-            <span
-              class="types doudong"
-              :class="{
-                typeRed: item.onlineState == 0,
-                typeGreen: item.onlineState == 1,
-              }"
-              >{{ item.onlineState == 1 ? "上线" : "下线" }}</span
-            >
-
-            <div class="info addresswrap">
-              <span class="labels">地址：</span>
-              <span class="text-content ciyao" style="font-size: 12px"> {{ addressHandle(item) }}</span>
-            </div>
-          </div>
-        </li>
-      </ul>
-    </component>
+    <!-- 下方箭头数据条 -->
+    <div class="arrow-panel" v-if="active">
+      <div
+        class="arrow-row"
+        v-for="row in active.rows"
+        :key="row.label"
+      >
+        <div
+          class="arrow-bg"
+          :class="{ 'is-active': true }"
+        >
+          <span class="label">{{ row.label }}</span>
+          <span class="value">{{ format(row.value) }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
+<script setup lang="ts">
+import { ref, computed } from "vue"
+import CubePercent from "./CubePercent.vue"
+
+const cubes = [
+  {
+    id: "a",
+    label: "安装占比",
+    percent: 78,
+    rows: [
+      { label: "总签单保费", value: 895000 },
+      { label: "已申请未安装车均保费", value: 895000 },
+      { label: "已安装车均保费", value: 895000 },
+    ],
+  },
+  {
+    id: "b",
+    label: "设备安装率",
+    percent: 78,
+    rows: [
+      { label: "总签单保费", value: 812000 },
+      { label: "已申请未安装车均保费", value: 765000 },
+      { label: "已安装车均保费", value: 699000 },
+    ],
+  },
+  {
+    id: "c",
+    label: "满期赔付率",
+    percent: 78,
+    rows: [
+      { label: "总签单保费", value: 812000 },
+      { label: "已申请未安装车均保费", value: 765000 },
+      { label: "已安装车均保费", value: 699000 },
+    ],
+  },
+  {
+    id: "d",
+    label: "利润占比",
+    percent: 71,
+    rows: [
+      { label: "总签单保费", value: 812000 },
+      { label: "已申请未安装车均保费", value: 765000 },
+      { label: "已安装车均保费", value: 699000 },
+    ],
+  },
+]
+
+const activeId = ref<string | null>(null)
+
+const active = computed(() =>
+  cubes.find(i => i.id === activeId.value)
+)
+
+const onHover = (id: string) => {
+  activeId.value = id
+}
+
+const onLeave = () => {
+  activeId.value = null
+}
+
+const format = (num: number) =>
+  num.toLocaleString()
+</script>
+
 <style scoped lang="scss">
-.left_boottom_wrap {
-  overflow: hidden;
+.panel {
   width: 100%;
-  height: 100%;
 }
 
-.doudong {
-  overflow: hidden;
-  backface-visibility: hidden;
+.cube-row {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 40px;
 }
 
-.overflow-y-auto {
-  overflow-y: auto;
+/* 箭头区域 */
+.arrow-panel {
+  margin-top: 36px;
 }
 
-.left_boottom {
-  width: 100%;
-  height: 100%;
+.arrow-row {
+  margin-bottom: 10px;
+}
 
-  .left_boottom_item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    font-size: 14px;
-    margin: 10px 0;
-    .orderNum {
-      margin: 0 16px 0 -20px;
-    }
+.arrow-bg {
+  width: 460px;
+  height: 34px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 
-    .info {
-      margin-right: 10px;
-      display: flex;
-      align-items: center;
-      color: #fff;
+  padding: 0 32px 0 48px;
 
-      .labels {
-        flex-shrink: 0;
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.6);
-      }
+  background: linear-gradient(
+    to right,
+    rgba(10, 60, 120, 0.9),
+    rgba(5, 30, 80, 0.95)
+  );
 
-      .zhuyao {
-        color: $primary-color;
-        font-size: 15px;
-      }
+  clip-path: polygon(
+    7% 50%,
+    20px 0,
+    100% 0,
+    100% 100%,
+    20px 100%
+  );
 
-      .ciyao {
-        color: rgba(255, 255, 255, 0.8);
-      }
+  border: 1px solid rgba(0, 200, 255, 0.35);
 
-      .warning {
-        color: #e6a23c;
-        font-size: 15px;
-      }
-    }
+  transition:
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
 
-    .inner_right {
-      position: relative;
-      height: 100%;
-      width: 380px;
-      flex-shrink: 0;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      .dibu {
-        position: absolute;
-        height: 2px;
-        width: 104%;
-        background-image: url("@/assets/img/zuo_xuxian.png");
-        bottom: -10px;
-        left: -2%;
-        background-size: cover;
-      }
-      .addresswrap {
-        width: 100%;
-        display: flex;
-        margin-top: 8px;
-      }
-    }
+/* 激活态 */
+.arrow-bg.is-active {
+  background: linear-gradient(
+    to right,
+    rgba(0, 180, 255, 0.95),
+    rgba(0, 120, 200, 0.9)
+  );
 
-    .wangguan {
-      color: #1890ff;
-      font-weight: 900;
-      font-size: 15px;
-      width: 80px;
-      flex-shrink: 0;
-    }
+  border-color: rgba(0, 255, 255, 0.8);
 
-    .time {
-      font-size: 12px;
-      // color: rgba(211, 210, 210,.8);
-      color: #fff;
-    }
+  box-shadow:
+    0 0 12px rgba(0, 255, 255, 0.45),
+    inset 0 0 10px rgba(0, 255, 255, 0.35);
+}
 
-    .address {
-      font-size: 12px;
-      cursor: pointer;
-      // @include text-overflow(1);
-    }
+.label {
+  font-size: 14px;
+  color: #e6f6ff;
+}
 
-    .types {
-      width: 30px;
-      flex-shrink: 0;
-    }
-
-    .typeRed {
-      color: #fc1a1a;
-    }
-
-    .typeGreen {
-      color: #29fc29;
-    }
-  }
+.value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #00f7ff;
 }
 </style>
