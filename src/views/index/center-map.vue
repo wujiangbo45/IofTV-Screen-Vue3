@@ -95,7 +95,6 @@ const mapClick = (params: any) => {
       <div class="you"></div>
     </div>
     <div class="mapwrap">
-      <BorderBox13>
         <div class="quanguo" @click="getData('china')" v-if="code !== 'china'">中国</div>
         <v-chart
           class="chart"
@@ -104,7 +103,6 @@ const mapClick = (params: any) => {
           @click="mapClick"
           v-if="JSON.stringify(option) != '{}'"
         />
-      </BorderBox13>
     </div>
   </div>
 </template>

@@ -27,12 +27,14 @@ export const optionHandle = (regionCode: string, list: object[], mapData: Mapdat
           light: {
             main: {
               color: '#0a7171', // 主光源发光色
-              intensity: 0.1,
+              intensity: 1,
               shadow: true,
+              shadowQuality: 'high',    // 阴影质量
+              shadowDistance: 100,      // 光源到地表的距离，影响阴影大小
             },
             ambient: {
               color: '#00f7f6', // 环境光发光色
-              intensity: 1,
+              intensity: 0.5,
             }
           },
           map: regionCode,
@@ -86,8 +88,13 @@ export const optionHandle = (regionCode: string, list: object[], mapData: Mapdat
                 show:false,
                 shading: 'realistic',
                 realisticMaterial: {
-                  texture: ln, // 主贴图
-                  detailTexture: ln, // 可选，增强细节
+                  texture: ln,        // 主贴图
+                  detailTexture: ln,  // 细节贴图
+                  roughness: 0.1,     // 粗糙度，越小越光滑（镜面感）
+                  metalness: 0.8,     // 金属感，越大越像镜面
+                  specularIntensity: 1, // 高光强度
+                  clearCoat: 1,       // 表面反射层
+                  clearCoatRoughness: 0.05, // 反射层粗糙度
                 },
                 viewControl: {
                   alpha: 45,           // 增大俯仰角，地图看起来更立体
@@ -124,7 +131,20 @@ export const optionHandle = (regionCode: string, list: object[], mapData: Mapdat
               },
               label: { show: false }, // 默认不显示
                 
-              }
+              },
+              {
+    type: 'surface', // 模拟地面
+    mesh: {
+      type: 'plane',
+      width: 500,
+      height: 500,
+    },
+    itemStyle: {
+      color: 'rgba(0,0,0,0.1)', // 阴影色
+    },
+    silent: true, // 不响应鼠标
+    shading: 'realistic',
+  }
 
           
         ],
