@@ -74,7 +74,7 @@ const getGeojson = (regionCode: string) => {
     }
   });
 };
-getData(code.value);
+getData("210000");
 
 const mapClick = (params: any) => {
   // console.log(params);
@@ -148,7 +148,7 @@ const mapClick = (params: any) => {
   }
 
   .mapwrap {
-    height: 580px;
+    height: 930px;
     width: 100%;
     // padding: 0 0 10px 0;
     box-sizing: border-box;

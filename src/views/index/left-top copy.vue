@@ -4,7 +4,6 @@ import { countDeviceNum } from "@/api";
 import CountUp from "@/components/count-up";
 import {ElMessage} from "element-plus"
 import RingDashboard from "./RingDashboard.vue";
-
 const duration = ref(2);
 const state = reactive({
   alarmNum: 0,
@@ -43,6 +42,7 @@ getData();
 }
 
 .user_Overview {
+  
   li {
     flex: 1;
 
