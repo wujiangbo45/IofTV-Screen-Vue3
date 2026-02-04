@@ -224,8 +224,8 @@
   }
   
   .digit {
-    width: 42px;
-    height: 56px;
+    width: 48px;
+    height: 72px;
     position: relative;
     transform: translateZ(8px);
     perspective: 600px;
@@ -234,8 +234,8 @@
   .card {
     position: absolute;
     inset: 0;
-    --digit-height: 56px;
-    --digit-offset: 14px;
+    --digit-height: 72px;
+    --digit-offset: 18px;
     --split-gap: 1px;
     border-radius: 6px;
     background: linear-gradient(
@@ -299,7 +299,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 34px;
+    font-size: 42px;
     font-weight: bold;
     color: #ffffff;
     text-shadow: 0 0 6px rgba(0, 200, 255, 0.8);
