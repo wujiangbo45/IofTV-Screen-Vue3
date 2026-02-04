@@ -17,12 +17,12 @@ import HumanBodyView  from "./HumanBodyView.vue";
         <div class="item">实时监测</div>
         <div class="item">统计分析</div>
       </div> -->
-      <ItemWrap class="contetn_left-top contetn_lr-item" title="设备总览">
+      <ItemWrap class="contetn_left-top contetn_lr-item" title="利润总额占比">
         <LeftTop />
       </ItemWrap>
       <ItemWrap
         class="contetn_left-bottom contetn_lr-item"
-        title="设备提醒"
+        title="业务数据统计"
         style="padding: 0 10px 16px 10px"
       >
         <LeftBottom />

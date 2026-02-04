@@ -43,9 +43,7 @@ const cubes = [
     label: "安装占比",
     percent: 78,
     rows: [
-      { label: "总签单保费", value: 895000 },
-      { label: "已申请未安装车均保费", value: 895000 },
-      { label: "已安装车均保费", value: 895000 },
+      { label: "安装台数", value: 895000 },
     ],
   },
   {
@@ -63,9 +61,9 @@ const cubes = [
     label: "满期赔付率",
     percent: 78,
     rows: [
-      { label: "总签单保费", value: 812000 },
-      { label: "已申请未安装车均保费", value: 765000 },
-      { label: "已安装车均保费", value: 699000 },
+      { label: "满期保费", value: 812000 },
+      { label: "赔付案件", value: 765000 },
+      { label: "赔款总额", value: 699000 },
     ],
   },
   {
@@ -73,9 +71,7 @@ const cubes = [
     label: "利润占比",
     percent: 71,
     rows: [
-      { label: "总签单保费", value: 812000 },
-      { label: "已申请未安装车均保费", value: 765000 },
-      { label: "已安装车均保费", value: 699000 },
+      { label: "利润总额", value: 812000 }
     ],
   },
 ]

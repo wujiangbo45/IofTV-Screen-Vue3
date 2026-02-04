@@ -8,7 +8,7 @@ const dateData = reactive<DateDataType>({
   dateDay: "",
   dateYear: "",
   dateWeek: "",
-  timing:null
+  timing: null as any
 });
 
 const { setSettingShow} =useSettingStore()
@@ -29,7 +29,7 @@ timeFn()
     <div class="guang"></div>
     <div class="d-flex jc-center">
       <div class="title">
-        <span class="title-text">互联网设备可视化平台</span>
+        <span class="title-text">保险核算统计大屏</span>
       </div>
     </div>
     <div class="timers">
