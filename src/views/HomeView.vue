@@ -40,7 +40,7 @@ const wrapperStyle = {};
   height: 100%;
   padding: 16px 16px 16px 16px;
   box-sizing: border-box;
-  background-image: url("@/assets/img/pageBg.png");
+  background-image: url("@/assets/img/dashboard-bg.svg");
   background-size: cover;
   background-position: center center;
 }

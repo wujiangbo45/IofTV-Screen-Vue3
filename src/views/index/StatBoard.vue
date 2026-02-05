@@ -2,7 +2,10 @@
     <div class="stat-board">
       <!-- 左侧凹槽箭头 -->
       <div class="edge-arrow left">
-        <span class="icon">›</span>
+        <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7.5 5.5L14 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M12.5 5.5L19 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.55" />
+        </svg>
       </div>
   
       <!-- 中间指标 -->
@@ -42,7 +45,10 @@
   
       <!-- 右侧凹槽箭头 -->
       <div class="edge-arrow right">
-        <span class="icon">›</span>
+        <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7.5 5.5L14 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M12.5 5.5L19 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.55" />
+        </svg>
       </div>
     </div>
   </template>
@@ -152,7 +158,7 @@
   /* ===== 凹槽发光箭头 ===== */
   .edge-arrow {
     width: 36px;
-    height: 72px;
+    height: 102px;
     position: relative;
     border-radius: 6px;
     background: linear-gradient(180deg, #071a33, #0b2c5f);
@@ -180,18 +186,16 @@
   .edge-arrow::before { left: 0 }
   .edge-arrow::after { right: 0 }
   
-  .edge-arrow .icon {
+  .edge-arrow .arrow-icon {
     position: absolute;
     inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    margin: auto;
     color: #dfffff;
-    text-shadow:
-      0 0 6px rgba(0, 234, 255, 0.9),
-      0 0 12px rgba(0, 234, 255, 0.6);
+    filter:
+      drop-shadow(0 0 6px rgba(0, 234, 255, 0.9))
+      drop-shadow(0 0 12px rgba(0, 234, 255, 0.6));
   }
   
   .edge-arrow.right {
@@ -209,10 +213,26 @@
     font-size: 16px;
     margin-bottom: 12px;
     color: #e6f6ff;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(8, 26, 54, 0.45), rgba(5, 14, 28, 0.65));
+    box-shadow: inset 0 0 6px rgba(70, 210, 255, 0.12);
+    text-shadow: none;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
   
     .unit {
       font-size: 13px;
       opacity: 0.7;
+      color: #92e8ff;
+      padding: 1px 6px;
+      border-radius: 6px;
+      background: rgba(40, 160, 210, 0.18);
     }
   }
   

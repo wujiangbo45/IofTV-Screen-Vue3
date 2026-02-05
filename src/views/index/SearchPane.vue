@@ -2,14 +2,14 @@
   <div class="search-pane" :class="{ open: isOpen }" ref="rootRef">
     <button class="toggle" type="button" @click="toggle">
       <span class="gear">⚙</span>
-      <span class="title">Stats Dimension Settings</span>
+      <span class="title">统计搜索设置</span>
       <span class="chev" :class="{ up: isOpen }">▴</span>
     </button>
 
     <transition name="pane">
       <div v-show="isOpen" class="panel">
         <div class="panel-inner">
-          <div class="panel-title">Map Display Data</div>
+          <div class="panel-title">地图展示数据</div>
         <div class="tabs">
           <button
             class="tab"
@@ -17,7 +17,7 @@
             :class="{ active: filters.metric === 'contract' }"
             @click="toggleMetric('contract')"
           >
-            Contracted Companies
+            签约公司
           </button>
           <button
             class="tab"
@@ -25,53 +25,47 @@
             :class="{ active: filters.metric === 'install' }"
             @click="toggleMetric('install')"
           >
-            Installed Vehicles
+            安装车辆
           </button>
         </div>
 
-        <div class="section-title">Statistics Range</div>
-        <div class="filters">
+        <div class="section-title">统计维度</div>
+        <div class="filters stat-filters">
           <div class="field">
-            <label>Year</label>
-            <el-select v-model="filters.year" size="small" class="select">
+            <label>年</label>
+            <el-select v-model="filters.year" size="small" class="select" popper-class="stat-select-popper">
               <el-option v-for="y in years" :key="y" :label="y" :value="y" />
             </el-select>
           </div>
           <div class="field">
-            <label>Month</label>
-            <el-select v-model="filters.month" size="small" class="select">
+            <label>月</label>
+            <el-select v-model="filters.month" size="small" class="select" popper-class="stat-select-popper">
               <el-option v-for="m in months" :key="m" :label="m" :value="m" />
             </el-select>
           </div>
           <div class="field">
-            <label>Day</label>
-            <el-select v-model="filters.day" size="small" class="select">
+            <label>日</label>
+            <el-select v-model="filters.day" size="small" class="select" popper-class="stat-select-popper">
               <el-option v-for="d in days" :key="d" :label="d" :value="d" />
             </el-select>
           </div>
           <div class="field">
-            <label>Region</label>
-            <el-select v-model="filters.region" size="small" class="select">
-              <el-option v-for="r in regions" :key="r" :label="r" :value="r" />
-            </el-select>
-          </div>
-          <div class="field">
-            <label>Usage</label>
-            <el-select v-model="filters.type" size="small" class="select">
+            <label>使用性质</label>
+            <el-select v-model="filters.type" size="small" class="select" popper-class="stat-select-popper">
               <el-option v-for="t in types" :key="t" :label="t" :value="t" />
             </el-select>
           </div>
           <div class="field">
-            <label>Vehicle</label>
-            <el-select v-model="filters.car" size="small" class="select">
+            <label>车型</label>
+            <el-select v-model="filters.car" size="small" class="select" popper-class="stat-select-popper">
               <el-option v-for="c in cars" :key="c" :label="c" :value="c" />
             </el-select>
           </div>
         </div>
 
         <div class="actions">
-          <button class="btn primary" type="button" @click="onSearch">Search</button>
-          <button class="btn ghost" type="button" @click="onReset">Reset</button>
+          <button class="btn primary" type="button" @click="onSearch">搜索</button>
+          <button class="btn ghost" type="button" @click="onReset">重置</button>
         </div>
         </div>
       </div>
@@ -166,7 +160,9 @@ const handleOutsideClick = (event: MouseEvent) => {
   if (!isOpen.value) return;
   const root = rootRef.value;
   if (!root) return;
-  if (event.target instanceof Node && !root.contains(event.target)) {
+  const target = event.target as HTMLElement | null;
+  const inDropdown = !!target?.closest?.(".el-select-dropdown, .el-popper");
+  if (event.target instanceof Node && !root.contains(event.target) && !inDropdown) {
     isOpen.value = false;
   }
 };
@@ -279,6 +275,21 @@ onBeforeUnmount(() => {
   color: #ffffff;
 }
 
+.tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #7ff7ff, transparent);
+  box-shadow: 0 0 10px rgba(80, 240, 255, 0.55);
+}
+
+.tab.active {
+  text-shadow: 0 0 8px rgba(120, 230, 255, 0.6);
+}
+
 .section-title {
   font-size: 13px;
   color: #b9f0ff;
@@ -334,13 +345,108 @@ onBeforeUnmount(() => {
   opacity: 0.7;
 }
 
-:deep(.el-select .el-input__wrapper) {
-  background: rgba(10, 30, 60, 0.8);
-  border-color: rgba(60, 200, 255, 0.4);
-  box-shadow: none;
+/* 统计维度下拉框（年/月/日/使用性质/车型） */
+:global(.stat-filters .el-select) {
+  --el-input-bg-color: rgba(4, 10, 24, 1);
+  --el-fill-color-blank: rgba(4, 10, 24, 1);
+  --el-input-border-color: rgba(60, 170, 255, 0.35);
+  --el-input-text-color: #d8f2ff;
+  --el-input-hover-border-color: rgba(110, 220, 255, 0.7);
+  --el-input-focus-border-color: rgba(110, 220, 255, 0.85);
+  --el-border-color: rgba(60, 170, 255, 0.35);
+  --el-text-color-regular: #d8f2ff;
 }
 
-:deep(.el-select .el-input__inner) {
-  color: #e6f7ff;
+:global(.stat-filters .el-select .el-input__wrapper) {
+  background: linear-gradient(180deg, rgba(4, 14, 30, 0.98), rgba(4, 10, 24, 1)) !important;
+  border: 1px solid rgba(60, 170, 255, 0.35) !important;
+  box-shadow: inset 0 0 8px rgba(40, 140, 220, 0.18) !important;
+}
+
+:global(.stat-filters .el-select .el-input__inner) {
+  color: #d8f2ff !important;
+  font-size: 12px;
+}
+
+:global(.stat-filters .el-select .el-select__caret) {
+  color: #6fdcff !important;
+}
+
+:global(.stat-filters .el-select .el-input__wrapper.is-focus) {
+  border-color: rgba(110, 220, 255, 0.75) !important;
+  box-shadow: inset 0 0 10px rgba(60, 180, 255, 0.28), 0 0 10px rgba(0, 120, 220, 0.28) !important;
+}
+
+/* 下拉面板样式（通过 popper-class 指定） */
+:global(.stat-select-popper) {
+  background: rgba(5, 16, 34, 0.98) !important;
+  border: 1px solid rgba(60, 200, 255, 0.35) !important;
+  box-shadow: 0 10px 20px rgba(2, 10, 28, 0.6), 0 0 12px rgba(0, 120, 220, 0.28) !important;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item) {
+  color: #cfefff;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item.hover),
+:global(.stat-select-popper .el-select-dropdown__item:hover) {
+  background: rgba(8, 42, 90, 0.75);
+  color: #ffffff;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item.selected) {
+  background: rgba(11, 124, 236, 0.85) !important;
+  color: #ffffff !important;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"]),
+:global(.stat-select-popper .el-select-dropdown__item.is-selected),
+:global(.stat-select-popper .el-select-dropdown__item.is-active) {
+  background: rgba(11, 125, 240, 0.85) !important;
+  color: #ffffff !important;
+}
+
+:global(.stat-select-popper .el-select-dropdown) {
+  background: rgba(5, 16, 34, 0.98) !important;
+  border: 1px solid rgba(60, 200, 255, 0.35) !important;
+  box-shadow: 0 10px 20px rgba(2, 10, 28, 0.6), 0 0 12px rgba(0, 120, 220, 0.28) !important;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item) {
+  color: #cfefff;
+  position: relative;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item.hover){
+  background: rgba(227, 229, 233, 0.75);
+  color: #ffffff;
+}
+:global(.stat-select-popper .el-select-dropdown__item.is-hovering) {
+  background: rgba(56, 126, 224, 0.75);
+  color: #ffffff;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item.selected) {
+  background: rgba(10, 90, 170, 0.85) !important;
+  color: #ffffff !important;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"]),
+:global(.stat-select-popper .el-select-dropdown__item.is-selected),
+:global(.stat-select-popper .el-select-dropdown__item.is-active) {
+  background: rgba(10, 90, 170, 0.85) !important;
+  color: #ffffff !important;
+}
+
+:global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 90, 170, 0.85) !important;
+  z-index: -1;
+}
+:deep(.el-select-dropdown__item.is-selected) {
+  /* 你的样式 */
+  background-color: rgba(199, 18, 172, 0.7) !important;
 }
 </style>

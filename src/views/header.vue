@@ -1,26 +1,39 @@
-<script setup lang="ts">
-import { reactive } from "vue";
-import dayjs from 'dayjs';
-import type {DateDataType} from "./index.d"
-import {useSettingStore} from "@/stores/index"
+﻿<script setup lang="ts">
+import { onBeforeUnmount, reactive } from "vue";
+import { useRouter } from "vue-router";
+import dayjs from "dayjs";
+import type { DateDataType } from "./index.d";
+import { useSettingStore } from "@/stores/index";
 
 const dateData = reactive<DateDataType>({
   dateDay: "",
   dateYear: "",
   dateWeek: "",
-  timing: null as any
+  timing: null,
 });
 
-const { setSettingShow} =useSettingStore()
-const weekday= ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
-const timeFn = () => {
-  dateData.timing = setInterval(() => {
-    dateData.dateDay = dayjs().format("YYYY-MM-DD hh : mm : ss");
-    dateData.dateWeek = weekday[dayjs().day()];
-  }, 1000);
+const { setSettingShow } = useSettingStore();
+const router = useRouter();
+const weekday = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+const updateTime = () => {
+  dateData.dateYear = dayjs().format("YYYY-MM-DD");
+  dateData.dateDay = dayjs().format("HH:mm:ss");
+  dateData.dateWeek = weekday[dayjs().day()];
 };
-timeFn()
+
+const timeFn = () => {
+  updateTime();
+  dateData.timing = setInterval(updateTime, 1000);
+};
+
+timeFn();
+
+onBeforeUnmount(() => {
+  if (dateData.timing) clearInterval(dateData.timing);
+});
 </script>
+
 
 <template>
   <div class="d-flex jc-center title_wrap">
@@ -33,10 +46,40 @@ timeFn()
       </div>
     </div>
     <div class="timers">
-      {{ dateData.dateYear }} {{ dateData.dateWeek }} {{ dateData.dateDay }}
+      <div class="home_icon" title="返回系统" @click="router.push('/')">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3.5 3 11h2v8h5v-5h4v5h5v-8h2L12 3.5z" fill="currentColor" />
+        </svg>
+      </div>
+      <div class="time-panel">
+        <div class="time-meta">
+          <span class="time-date">{{ dateData.dateYear }}</span>
+          <span class="time-week">{{ dateData.dateWeek }}</span>
+        </div>
+        <div class="time-roller">
+          <span
+            v-for="(ch, idx) in dateData.dateDay.split('')"
+            :key="idx"
+            class="time-char"
+            :class="{ 'is-sep': ch === ':' }"
+          >
+            <span v-if="ch === ':'" class="time-sep">:</span>
+            <span v-else class="digit">
+              <span class="digit-strip" :style="{ transform: 'translateY(-' + Number(ch) * 10 + '%)' }">
+                <span v-for="n in 10" :key="n" class="digit-item">{{ n - 1 }}</span>
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
 
-      <div class="setting_icon"   @click="setSettingShow(true)">
-          <img src="@/assets/img/headers/setting.png" alt="设置">
+      <div class="setting_icon" title="设置" @click="setSettingShow(true)">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.06 7.06 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.82 14.52a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.58-.23 1.12-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4z"
+            fill="currentColor"
+          />
+        </svg>
       </div>
     </div>
   </div>
@@ -80,23 +123,147 @@ timeFn()
 
   .timers {
     position: absolute;
-    right: 0;
-    top: 30px;
-    font-size: 18px;
+    right: 13px;
+    top: 11px;
     display: flex;
     align-items: center;
+    gap: 10px;
+
+    .home_icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #7feaff;
+      background: rgba(8, 26, 54, 0.85);
+      border: 1px solid rgba(120, 230, 255, 0.3);
+      box-shadow: inset 0 0 8px rgba(70, 210, 255, 0.15);
+      cursor: pointer;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .home_icon:hover,
+    .setting_icon:hover {
+      border-color: rgba(140, 240, 255, 0.7);
+      box-shadow:
+        inset 0 0 10px rgba(90, 230, 255, 0.25),
+        0 4px 10px rgba(30, 160, 220, 0.35);
+      transform: translateY(-1px);
+      transition: all 0.2s ease;
+    }
+
+    .time-panel {
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(120, 230, 255, 0.35);
+      background: linear-gradient(180deg, rgba(8, 26, 54, 0.85), rgba(5, 14, 28, 0.9));
+      box-shadow: inset 0 0 0 1px rgba(70, 200, 255, 0.15), 0 6px 16px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .time-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #bfe9ff;
+      letter-spacing: 0.4px;
+    }
+
+    .time-week {
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(40, 160, 210, 0.18);
+      color: #7feaff;
+    }
+
+    .time-roller {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      font-family: "DIN Alternate", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .time-char {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(10, 34, 68, 0.65);
+      box-shadow: inset 0 0 8px rgba(70, 210, 255, 0.12);
+      overflow: hidden;
+    }
+
+    .time-char.is-sep {
+      width: 8px;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .time-sep {
+      color: #9be8ff;
+      font-weight: 700;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .digit {
+      width: 100%;
+      height: 100%;
+      display: block;
+      position: relative;
+    }
+
+    .digit-strip {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      transition: transform 0.45s ease;
+    }
+
+    .digit-item {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #7ff7ff;
+      text-shadow: 0 0 6px rgba(100, 240, 255, 0.35);
+    }
 
     .setting_icon {
-      width: 20px;
-      height: 20px;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #7feaff;
+      background: rgba(8, 26, 54, 0.85);
+      border: 1px solid rgba(120, 230, 255, 0.3);
+      box-shadow: inset 0 0 8px rgba(70, 210, 255, 0.15);
       cursor: pointer;
-      margin-left: 12px;
-      img{
-        width: 100%;
-        height: 100%;
+
+      svg {
+        width: 18px;
+        height: 18px;
+        filter: drop-shadow(0 0 6px rgba(100, 240, 255, 0.35));
       }
     }
   }
+
 }
 .title {
   position: relative;

@@ -198,16 +198,22 @@ onBeforeUnmount(() => {
 
 :deep(.map-label) {
     cursor: pointer;
-    min-width: 150px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    background: linear-gradient(180deg, rgba(16, 56, 110, 0.92), rgba(8, 28, 60, 0.92));
-    border: 1px solid rgba(120, 230, 255, 0.7);
-    color: #d8f2ff;
+    min-width: 168px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgba(18, 64, 125, 0.95), rgba(6, 22, 48, 0.92));
+    border: 1px solid rgba(130, 235, 255, 0.6);
+    box-shadow:
+      inset 0 0 0 1px rgba(120, 210, 255, 0.18),
+      inset 0 0 16px rgba(60, 190, 255, 0.15),
+      0 10px 24px rgba(0, 0, 0, 0.35),
+      0 0 20px rgba(80, 220, 255, 0.35);
+    color: #e6f7ff;
+    font-family: "DIN Alternate", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     font-size: 12px;
-    letter-spacing: 0.2px;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35), 0 0 14px rgba(60, 210, 255, 0.45);
-    backdrop-filter: blur(6px);
+    letter-spacing: 0.3px;
+    text-align: left;
+    backdrop-filter: blur(8px);
     pointer-events: auto;
     position: relative;
   }
@@ -224,14 +230,21 @@ onBeforeUnmount(() => {
   }
 
   :deep(.map-label__title) {
-    color: #7ff7ff;
-    font-size: 14px;
+    color: #88f7ff;
+    font-size: 15px;
     font-weight: 700;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    letter-spacing: 0.6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(120, 230, 255, 0.35);
   }
 
   :deep(.map-label__row) {
     line-height: 18px;
     color: #cfe9ff;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
   }
 </style>
