@@ -37,6 +37,38 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="d-flex jc-center title_wrap">
+    <svg class="top-glow-svg" viewBox="0 0 1920 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="topGlow" x1="0%" y1="50%" x2="100%" y2="50%">
+          <stop offset="0%" stop-color="rgba(0, 120, 220, 0)" />
+          <stop offset="35%" stop-color="rgba(120, 230, 255, 0.9)" />
+          <stop offset="65%" stop-color="rgba(120, 230, 255, 0.9)" />
+          <stop offset="100%" stop-color="rgba(0, 120, 220, 0)" />
+        </linearGradient>
+        <radialGradient id="topGlowSoft" cx="50%" cy="0%" r="70%">
+          <stop offset="0%" stop-color="rgba(120, 230, 255, 0.55)" />
+          <stop offset="100%" stop-color="rgba(0, 80, 160, 0)" />
+        </radialGradient>
+        <filter id="topGlowBlur" x="-20%" y="-50%" width="140%" height="200%">
+          <feGaussianBlur stdDeviation="12" />
+        </filter>
+      </defs>
+      <rect x="0" y="0" width="1920" height="120" fill="url(#topGlowSoft)" filter="url(#topGlowBlur)" />
+      <rect x="0" y="92" width="1920" height="6" rx="3" fill="url(#topGlow)" filter="url(#topGlowBlur)" />
+      <line
+        x1="0"
+        y1="95"
+        x2="1920"
+        y2="95"
+        stroke="rgba(120, 230, 255, 0.9)"
+        stroke-width="4"
+        stroke-linecap="round"
+        stroke-dasharray="120 1800"
+        filter="url(#topGlowBlur)"
+      >
+        <animate attributeName="stroke-dashoffset" from="0" to="-1920" dur="2.4s" repeatCount="indefinite" />
+      </line>
+    </svg>
     <div class="zuojuxing"></div>
     <div class="youjuxing"></div>
     <div class="guang"></div>
@@ -93,7 +125,15 @@ onBeforeUnmount(() => {
   background-position: center center;
   position: relative;
   margin-bottom: 4px;
-
+  .top-glow-svg {
+    position: absolute;
+    inset: -20px 0 auto 0;
+    height: 100px;
+    width: 100%;
+    pointer-events: none;
+    opacity: 0.9;
+    mix-blend-mode: screen;
+  }
   .guang {
     position: absolute;
     bottom: -26px;
@@ -273,6 +313,35 @@ onBeforeUnmount(() => {
   color: transparent;
   height: 60px;
   line-height: 46px;
+  padding-bottom: 8px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    width: 320px;
+    height: 2px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, transparent, rgba(120, 230, 255, 0.95), transparent);
+    box-shadow: 0 0 10px rgba(80, 200, 255, 0.5);
+    opacity: 0.9;
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: calc(50% - 160px);
+    bottom: 4px;
+    width: 320px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, rgba(160, 255, 255, 0.95), transparent);
+    background-size: 200% 100%;
+    background-position: 0% 50%;
+    filter: blur(0.4px);
+    animation: title-sweep 2.8s ease-in-out infinite;
+  }
 
   .title-text {
     font-size: 38px;
@@ -287,6 +356,20 @@ onBeforeUnmount(() => {
     );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+  }
+}
+
+@keyframes title-sweep {
+  0% {
+    background-position: 0% 50%;
+    opacity: 0.2;
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    background-position: 100% 50%;
+    opacity: 0.2;
   }
 }
 </style>

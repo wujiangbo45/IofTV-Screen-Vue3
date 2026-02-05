@@ -216,8 +216,19 @@ onBeforeUnmount(() => {
     backdrop-filter: blur(8px);
     pointer-events: auto;
     position: relative;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   }
 
+  :deep(.map-label:hover) {
+    border-color: rgba(160, 245, 255, 0.85);
+    box-shadow:
+      inset 0 0 0 1px rgba(120, 220, 255, 0.45),
+      inset 0 0 22px rgba(80, 210, 255, 0.35),
+      0 10px 24px rgba(0, 0, 0, 0.35),
+      0 0 28px rgba(80, 220, 255, 0.85),
+      0 0 46px rgba(80, 220, 255, 0.55);
+    transform: translateY(-1px);
+  }
   :deep(.map-label)::after {
     content: "";
     position: absolute;

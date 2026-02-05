@@ -34,18 +34,21 @@
           <div class="field">
             <label>年</label>
             <el-select v-model="filters.year" size="small" class="select" popper-class="stat-select-popper">
+              <el-option  key="0" label="不限" value="0" />
               <el-option v-for="y in years" :key="y" :label="y" :value="y" />
             </el-select>
           </div>
           <div class="field">
             <label>月</label>
             <el-select v-model="filters.month" size="small" class="select" popper-class="stat-select-popper">
+              <el-option  key="0" label="不限" value="0" />
               <el-option v-for="m in months" :key="m" :label="m" :value="m" />
             </el-select>
           </div>
           <div class="field">
             <label>日</label>
             <el-select v-model="filters.day" size="small" class="select" popper-class="stat-select-popper">
+              <el-option  key="0" label="不限" value="0" />
               <el-option v-for="d in days" :key="d" :label="d" :value="d" />
             </el-select>
           </div>
@@ -99,8 +102,9 @@ const toggle = () => {
   isOpen.value = !isOpen.value;
 };
 
-const years = Array.from({ length: 11 }, (_, i) => String(2025 + i));
+const years = Array.from({ length: 11 }, (_, i) => String(2024 + i));
 const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+// 生成天数
 const days = ref<string[]>([]);
 const quarters = ["Q1", "Q2", "Q3", "Q4"];
 const regions = ["All Insurers", "North", "East", "South", "Southwest", "Northwest"];
@@ -109,9 +113,9 @@ const cars = ["All Vehicles", "Passenger", "Commercial", "New Energy"];
 
 const filters = reactive<Filters>({
   metric: "",
-  year: "2025",
-  month: "02",
-  day: "01",
+  year: "0",
+  month: "0",
+  day: "0",
   quarter: "Q1",
   region: "All Insurers",
   type: "All Usage Types",
@@ -145,9 +149,9 @@ const onSearch = () => {
 
 const onReset = () => {
   filters.metric = "";
-  filters.year = "2025";
-  filters.month = "02";
-  filters.day = "01";
+  filters.year = "0";
+  filters.month = "0";
+  filters.day = "0";
   filters.quarter = "Q1";
   filters.region = "All Insurers";
   filters.type = "All Usage Types";
@@ -390,16 +394,16 @@ onBeforeUnmount(() => {
 
 :global(.stat-select-popper .el-select-dropdown__item.hover),
 :global(.stat-select-popper .el-select-dropdown__item:hover) {
-  background: rgba(8, 42, 90, 0.75);
+  background: rgba(76, 142, 234, 0.75);
   color: #ffffff;
 }
 
-:global(.stat-select-popper .el-select-dropdown__item.selected) {
-  background: rgba(11, 124, 236, 0.85) !important;
-  color: #ffffff !important;
-}
+// :global(.stat-select-popper .el-select-dropdown__item.selected) {
+//   background: rgba(11, 124, 236, 0.85) !important;
+//   color: #ffffff !important;
+// }
 
-:global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"]),
+// :global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"]),
 :global(.stat-select-popper .el-select-dropdown__item.is-selected),
 :global(.stat-select-popper .el-select-dropdown__item.is-active) {
   background: rgba(11, 125, 240, 0.85) !important;
@@ -412,17 +416,18 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 20px rgba(2, 10, 28, 0.6), 0 0 12px rgba(0, 120, 220, 0.28) !important;
 }
 
-:global(.stat-select-popper .el-select-dropdown__item) {
-  color: #cfefff;
-  position: relative;
-}
+// :global(.stat-select-popper .el-select-dropdown__item) {
+//   color: #cfefff;
+//   position: relative;
+//   background: transparent;
+// }
 
 :global(.stat-select-popper .el-select-dropdown__item.hover){
   background: rgba(227, 229, 233, 0.75);
   color: #ffffff;
 }
 :global(.stat-select-popper .el-select-dropdown__item.is-hovering) {
-  background: rgba(56, 126, 224, 0.75);
+  background: rgba(142, 180, 233, 0.75);
   color: #ffffff;
 }
 
@@ -431,22 +436,36 @@ onBeforeUnmount(() => {
   color: #ffffff !important;
 }
 
-:global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"]),
+// :global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"]),
 :global(.stat-select-popper .el-select-dropdown__item.is-selected),
 :global(.stat-select-popper .el-select-dropdown__item.is-active) {
   background: rgba(10, 90, 170, 0.85) !important;
   color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: inset 0 0 10px rgba(90, 220, 255, 0.2);
 }
 
-:global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"])::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 90, 170, 0.85) !important;
-  z-index: -1;
-}
-:deep(.el-select-dropdown__item.is-selected) {
-  /* 你的样式 */
-  background-color: rgba(199, 18, 172, 0.7) !important;
-}
+// :global(.stat-select-popper .el-select-dropdown__item[aria-selected="true"])::before,
+// :global(.stat-select-popper .el-select-dropdown__item.is-selected)::before,
+// :global(.stat-select-popper .el-select-dropdown__item.is-active)::before {
+//   content: "";
+//   position: absolute;
+//   left: 8px;
+//   top: 50%;
+//   width: 6px;
+//   height: 6px;
+//   border-radius: 50%;
+//   background: #7ff7ff;
+//   transform: translateY(-50%);
+//   box-shadow: 0 0 8px rgba(120, 240, 255, 0.9);
+// }
+
+// :global(.stat-select-popper .el-select-dropdown__item.is-selected)::after {
+//   content: "";
+//   // position: absolute;
+//   inset: 0;
+//   background: rgba(10, 90, 170, 0.85) !important;
+//   z-index: -1;
+// }
+
 </style>

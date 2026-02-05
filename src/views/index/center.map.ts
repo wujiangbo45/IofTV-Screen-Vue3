@@ -41,6 +41,8 @@ export const createThreeMap = (
   let mapGroup: THREE.Group | null = null;
   let markerGroup: THREE.Group | null = null;
   let pulseMeshes: THREE.Object3D[] = [];
+  let labelObjects: CSS2DObject[] = [];
+  let activeLabelObject: CSS2DObject | null = null;
   let glowPathMaterials: THREE.ShaderMaterial[] = [];
   let regionMeshes: THREE.Mesh[] = [];
   let lastGeojson: any = null;
@@ -196,6 +198,8 @@ const createGlowPathMaterial = () =>
     if (labelRenderer) {
       labelRenderer.domElement.innerHTML = "";
     }
+    labelObjects = [];
+    activeLabelObject = null;
     pulseMeshes = [];
     const boundaryEdgeMap = new Map<string, EdgeRecord>();
     regionMeshes = [];
@@ -423,7 +427,7 @@ const createGlowPathMaterial = () =>
       const lat = d.value[1];
       const projected = projectPoint(lng, lat);
       if (!projected) return;
-      const heightScale = 0.35;
+      const heightScale = 0.55;
       const heightValue = Number(d.total ?? 0);
       const barHeight = (heightValue / maxVal) * 30 * heightScale + 2;
 
@@ -516,6 +520,18 @@ const createGlowPathMaterial = () =>
       label.className = "map-label";
       label.style.pointerEvents = "auto";
       label.style.cursor = "pointer";
+      const elevateLabel = (active: boolean) => {
+        const el = label as HTMLDivElement;
+        if (active) {
+          el.style.zIndex = "20";
+          el.style.transform = "translateY(-2px)";
+        } else {
+          el.style.zIndex = "";
+          el.style.transform = "";
+        }
+      };
+      label.addEventListener("mouseenter", () => elevateLabel(true));
+      label.addEventListener("mouseleave", () => elevateLabel(false));
       label.addEventListener("click", (ev) => {
         ev.stopPropagation();
         if (d.name) {
@@ -530,7 +546,7 @@ const createGlowPathMaterial = () =>
       title.textContent = d.name;
       const row1 = document.createElement("div");
       row1.className = "map-label__row";
-      row1.textContent = `签约企业�: ${d.total ?? "-"}`;
+      row1.textContent = `签约企业数: ${d.total ?? "-"}`;
       const row2 = document.createElement("div");
       row2.className = "map-label__row";
       row2.textContent = `签约企业占比: ${d.rate ?? "-"}`;
@@ -541,7 +557,10 @@ const createGlowPathMaterial = () =>
       const labelObj = new CSS2DObject(label);
       // Label height offset (increase to raise the sign)
       labelObj.position.set(projected[0], projected[1], barHeight + 58);
+      labelObj.userData.basePosition = labelObj.position.clone();
+      labelObj.userData.baseZ = labelObj.position.z;
       markerGroup?.add(labelObj);
+      labelObjects.push(labelObj);
     });
     
     scene.add(mapGroup);
@@ -656,6 +675,38 @@ const createGlowPathMaterial = () =>
   };
 
   // 鼠标滑动高亮：使用射线投影命中地图面
+
+  const handleLabelHover = (event: MouseEvent) => {
+    if (!camera || !container || labelObjects.length === 0) return;
+    const rect = container.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const w = rect.width || 1;
+    const h = rect.height || 1;
+    const temp = new THREE.Vector3();
+
+    let hit: CSS2DObject | null = null;
+    for (const obj of labelObjects) {
+      const el = obj.element as HTMLElement;
+      const rectW = el.offsetWidth || 140;
+      const rectH = el.offsetHeight || 50;
+      obj.getWorldPosition(temp);
+      temp.project(camera);
+      const sx = (temp.x * 0.5 + 0.5) * w;
+      const sy = (-temp.y * 0.5 + 0.5) * h;
+      const left = sx - rectW / 2;
+      const top = sy - rectH / 2;
+      if (x >= left && x <= left + rectW && y >= top && y <= top + rectH) {
+        hit = obj;
+        break;
+      }
+    }
+
+    if (hit !== activeLabelObject) {
+      activeLabelObject = hit;
+    }
+  };
+
   const onCanvasMove = (event: MouseEvent) => {
     if (!container || !camera) return;
     if (isPointerOnLabel(event)) {
@@ -719,6 +770,15 @@ const createGlowPathMaterial = () =>
   };
 
   // 渲染循环：波纹及光晕呼吸效果
+  const applyActiveLabelZ = () => {
+    if (!labelRenderer) return;
+    // ????? hover ? label???????????
+    if (activeLabelObject) {
+      const el = activeLabelObject.element as HTMLElement;
+      el.style.zIndex = "999";
+    }
+  };
+
   const startRenderLoop = () => {
     const animate = (time: number) => {
       pulseMeshes.forEach((mesh, idx) => {
@@ -732,6 +792,7 @@ const createGlowPathMaterial = () =>
       });
       renderer?.render(scene!, camera!);
       labelRenderer?.render(scene!, camera!);
+      applyActiveLabelZ();
       animationId = requestAnimationFrame(animate);
     };
     animationId = requestAnimationFrame(animate);
@@ -787,6 +848,7 @@ const createGlowPathMaterial = () =>
 
     renderer.domElement.addEventListener("click", onCanvasClick);
     renderer.domElement.addEventListener("mousemove", onCanvasMove);
+    container.addEventListener("mousemove", handleLabelHover, true);
 
     resizeObserver?.disconnect();
     resizeObserver = new ResizeObserver(handleResize);
@@ -814,6 +876,7 @@ const createGlowPathMaterial = () =>
     if (renderer?.domElement) {
       renderer.domElement.removeEventListener("click", onCanvasClick);
       renderer.domElement.removeEventListener("mousemove", onCanvasMove);
+      container.removeEventListener("mousemove", handleLabelHover, true);
     }
     resizeObserver?.disconnect();
     resizeObserver = null;

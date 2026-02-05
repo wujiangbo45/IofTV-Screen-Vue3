@@ -1,4 +1,4 @@
-import Mock from "mockjs";
+﻿﻿﻿﻿import Mock from "mockjs";
 //处理路径传参
 import { parameteUrl } from "@/utils/query-param"
 
@@ -190,10 +190,104 @@ export default [
                 const a = Mock.mock({
                     success: true,
                     data: {
-                        "dataList|100": [
-                            {
-                                name: "@city()",
-                                value: '@integer(1, 1000)'
+                        dataList: [
+                        {
+                                name: "沈阳市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "大连市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "鞍山市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "抚顺市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "本溪市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "丹东市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "锦州市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "营口市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "阜新市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "辽阳市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "盘锦市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "铁岭市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "朝阳市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
+                            },
+                        {
+                                name: "葫芦岛市",
+                                value: "@integer(1, 1000)",
+                                total: "@integer(50, 1000)",
+                                range: "@integer(1, 100)",
+                                rate: "@float(0, 100, 1, 1)"
                             }
                         ],
                         regionCode: params.regionCode,//-代表中国
