@@ -6,9 +6,127 @@ import { createThreeMap, regionCodes } from "./center.map";
 import type { MapdataType, ThreeMapInstance } from "./center.map";
 import StatBoard from "./StatBoard.vue";
 import SearchPane from "./SearchPane.vue";
+
+type SearchFilters = {
+  metric: string;
+  year: string;
+  month: string;
+  day: string;
+  quarter: string;
+  region: string;
+  type: string;
+  car: string;
+};
+
 const code = ref("210000");
 const containerRef = ref<HTMLDivElement | null>(null);
 let mapInstance: ThreeMapInstance | null = null;
+let hasMapInitialized = false;
+const isMapVisible = ref(false);
+const isMapAnimating = ref(false);
+const areLabelsVisible = ref(false);
+const currentFilters = ref<SearchFilters | null>(null);
+let revealTimer: number | null = null;
+let labelRevealTimer: number | null = null;
+let autoRefreshTimer: number | null = null;
+
+const clearRevealTimer = () => {
+  if (revealTimer !== null && typeof window !== "undefined") {
+    window.clearTimeout(revealTimer);
+    revealTimer = null;
+  }
+};
+
+const clearLabelRevealTimer = () => {
+  if (labelRevealTimer !== null && typeof window !== "undefined") {
+    window.clearTimeout(labelRevealTimer);
+    labelRevealTimer = null;
+  }
+};
+
+const hideLabelsImmediately = () => {
+  clearLabelRevealTimer();
+  areLabelsVisible.value = false;
+};
+
+const showLabelsWithoutSequence = () => {
+  clearLabelRevealTimer();
+  areLabelsVisible.value = true;
+};
+
+const startLabelRevealSequence = (options?: { skipMarkerAnimation?: boolean }) => {
+  const runSequence = () => {
+    areLabelsVisible.value = true;
+    if (!options?.skipMarkerAnimation) {
+      mapInstance?.revealMarkers();
+    }
+  };
+
+  if (typeof window === "undefined") {
+    runSequence();
+    return;
+  }
+
+  clearLabelRevealTimer();
+  labelRevealTimer = window.setTimeout(() => {
+    runSequence();
+    labelRevealTimer = null;
+  }, 560);
+};
+
+const prepareMapEntrance = () => {
+  isMapVisible.value = false;
+  isMapAnimating.value = true;
+  clearRevealTimer();
+  hideLabelsImmediately();
+};
+
+const finalizeMapEntrance = () => {
+  const showMapWhenReady = () => {
+    isMapVisible.value = true;
+    startLabelRevealSequence();
+  };
+
+  if (!isMapAnimating.value) {
+    showMapWhenReady();
+    return;
+  }
+
+  if (typeof window === "undefined") {
+    isMapAnimating.value = false;
+    showMapWhenReady();
+    return;
+  }
+
+  clearRevealTimer();
+  revealTimer = window.setTimeout(() => {
+    showMapWhenReady();
+    isMapAnimating.value = false;
+    revealTimer = null;
+  }, 32);
+};
+
+const cancelMapEntrance = () => {
+  clearRevealTimer();
+  isMapAnimating.value = false;
+  isMapVisible.value = true;
+  showLabelsWithoutSequence();
+};
+
+const startAutoRefresh = () => {
+  if (typeof window === "undefined") return;
+  stopAutoRefresh();
+  autoRefreshTimer = window.setInterval(() => {
+    getData(code.value, { labelsOnly: true, params: currentFilters.value ?? undefined });
+  }, 5000);
+};
+
+const stopAutoRefresh = () => {
+  if (autoRefreshTimer !== null && typeof window !== "undefined") {
+    window.clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+};
 
 withDefaults(
   defineProps<{
@@ -46,7 +164,7 @@ const getGeojson = async (regionCode: string) => {
   return mapjson as any;
 };
 
-const dataSetHandle = async (regionCode: string, list: object[]) => {
+const buildMapData = async (regionCode: string, list: object[]) => {
   const geojson: any = await getGeojson(regionCode);
   const cityCenter: Record<string, number[]> = {};
   const mapData: MapdataType[] = [];
@@ -63,7 +181,6 @@ const dataSetHandle = async (regionCode: string, list: object[]) => {
 
   list.forEach((item: any) => {
     if (cityCenter[item.name]) {
-      console.log(cityCenter);
       mapData.push({
         name: item.name,
         value: cityCenter[item.name],
@@ -73,23 +190,132 @@ const dataSetHandle = async (regionCode: string, list: object[]) => {
     }
   });
 
-  await nextTick();
-  mapInstance?.update(geojson, mapData);
+  return { geojson, mapData };
 };
 
-const getData = async (regionCode: string) => {
-  centerMap({ regionCode })
-    .then((res) => {
-      if (res.success) {
-        code.value = res.data.regionCode;
-        dataSetHandle(res.data.regionCode, res.data.dataList);
-      } else {
+const applyMapUpdate = async (regionCode: string, list: object[]) => {
+  const { geojson, mapData } = await buildMapData(regionCode, list);
+  await nextTick();
+  mapInstance?.update(geojson, mapData);
+  finalizeMapEntrance();
+  hasMapInitialized = true;
+};
+
+const rebuildMarkersOnly = async (
+  regionCode: string,
+  list: object[],
+  options?: { revealLabels?: boolean }
+) => {
+  const { mapData } = await buildMapData(regionCode, list);
+  await nextTick();
+  mapInstance?.replaceMarkers(mapData);
+  if (options?.revealLabels) {
+    hideLabelsImmediately();
+    startLabelRevealSequence();
+  }
+};
+
+const refreshLabelsOnly = (list: object[], options?: { reveal?: boolean }) => {
+  if (!Array.isArray(list) || list.length === 0) return;
+  const payload = list
+    .filter((item: any) => item && item.name)
+    .map((item: any) => ({
+      name: item.name,
+      total: item.total,
+      rate: item.rate,
+    }));
+  if (payload.length === 0) return;
+  mapInstance?.updateLabels(payload);
+  if (options?.reveal) {
+    hideLabelsImmediately();
+    startLabelRevealSequence({ skipMarkerAnimation: true });
+  }
+};
+
+const getData = (
+  regionCode: string,
+  options?: {
+    animate?: boolean;
+    labelsOnly?: boolean;
+    params?: Record<string, any> | null;
+    revealLabels?: boolean;
+    forceMapReload?: boolean;
+    reloadMarkers?: boolean;
+  }
+) => {
+  const {
+    animate = false,
+    labelsOnly = false,
+    params,
+    revealLabels = false,
+    forceMapReload = false,
+    reloadMarkers = false,
+  } = options || {};
+
+  const fallbackParams = params ?? currentFilters.value ?? undefined;
+  const requestPayload = fallbackParams ? { ...fallbackParams, regionCode } : { regionCode };
+
+  return centerMap(requestPayload)
+    .then(async (res) => {
+      if (!res.success) {
         ElMessage.error(res.msg);
+        if (forceMapReload) {
+          cancelMapEntrance();
+        }
+        return;
       }
+
+      const incomingRegion = res.data.regionCode;
+      const regionChanged = code.value !== incomingRegion;
+      code.value = incomingRegion;
+      const shouldUpdateMap = forceMapReload || regionChanged || !hasMapInitialized;
+
+      if (shouldUpdateMap) {
+        hideLabelsImmediately();
+        if (animate) {
+          prepareMapEntrance();
+        }
+        await applyMapUpdate(incomingRegion, res.data.dataList);
+        return;
+      }
+
+      if (reloadMarkers) {
+        await rebuildMarkersOnly(incomingRegion, res.data.dataList, { revealLabels: true });
+        return;
+      }
+
+      if (labelsOnly) {
+        refreshLabelsOnly(res.data.dataList, { reveal: revealLabels });
+        return;
+      }
+
+      refreshLabelsOnly(res.data.dataList, { reveal: revealLabels });
     })
     .catch((err) => {
       ElMessage.error(err);
+      if (forceMapReload) {
+        cancelMapEntrance();
+      }
     });
+};
+
+const applyFiltersAndReload = (filters: SearchFilters) => {
+  currentFilters.value = { ...filters };
+  stopAutoRefresh();
+  getData(code.value, {
+    reloadMarkers: true,
+    params: currentFilters.value,
+  }).finally(() => {
+    startAutoRefresh();
+  });
+};
+
+const handleSearch = (filters: SearchFilters) => {
+  applyFiltersAndReload(filters);
+};
+
+const handleReset = (filters: SearchFilters) => {
+  applyFiltersAndReload(filters);
 };
 
 onMounted(() => {
@@ -98,7 +324,7 @@ onMounted(() => {
       onRegionClick: (name) => {
         const xzqData = (regionCodes as any)[name];
         if (xzqData) {
-          getData(xzqData.adcode);
+          getData(xzqData.adcode, { animate: true, params: currentFilters.value ?? undefined });
         } else {
           // window["$message"].warning("暂无地市");
         }
@@ -108,25 +334,44 @@ onMounted(() => {
       },
     });
   }
-  getData('210000');
+  getData('210000', { animate: true, params: currentFilters.value ?? undefined });
+  startAutoRefresh();
 });
 
 onBeforeUnmount(() => {
   mapInstance?.dispose();
   mapInstance = null;
+  hasMapInitialized = false;
+  cancelMapEntrance();
+  hideLabelsImmediately();
+  stopAutoRefresh();
 });
 </script>
 
 <template>
   <div class="centermap">
-    <div class="mapwrap">
+    <div
+      class="mapwrap"
+      :class="{
+        'mapwrap--visible': isMapVisible,
+        'mapwrap--animating': isMapAnimating,
+      }"
+    >
       <div class="map-ring ring-1"></div>
       <div class="map-ring ring-2"></div>
       <div class="map-ring ring-3"></div>
       <StatBoard class="stat-board-pos"/>
-      <SearchPane class="search-pane-pos" />
+      <SearchPane class="search-pane-pos" @search="handleSearch" @reset="handleReset" />
       <!-- <div class="quanguo" @click="getData('china')" v-if="code !== 'china'">中国</div> -->
-      <div class="three-map" ref="containerRef"></div>
+      <div
+        class="three-map"
+        ref="containerRef"
+        :class="{
+          'three-map--hidden': !isMapVisible,
+          'three-map--entering': isMapAnimating,
+          'three-map--labels-visible': areLabelsVisible,
+        }"
+      ></div>
     </div>
   </div>
 </template>
@@ -143,6 +388,11 @@ onBeforeUnmount(() => {
     position: relative;
     border-radius: 24px;
     overflow: hidden;
+    opacity: 0;
+    transform: translateY(26px) scale(0.95);
+    transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+    filter: none;
 
     &::before {
       content: "";
@@ -188,24 +438,60 @@ onBeforeUnmount(() => {
       height: 100%;
       position: relative;
       z-index: 2;
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    &.mapwrap--visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    &.mapwrap--animating {
+      filter: drop-shadow(0 0 22px rgba(90, 220, 255, 0.35));
+    }
+
+    .three-map--hidden {
+      opacity: 0;
+      transform: scale(0.88) translateY(30px);
+    }
+
+    .three-map--entering {
+      filter: drop-shadow(0 0 18px rgba(90, 220, 255, 0.5));
+    }
+
+    .three-map :deep(.map-label) {
+      opacity: 0;
+      transform: translateY(18px) scale(0.94);
+      transition:
+        opacity 0.55s ease,
+        transform 0.55s ease;
+      transition-delay: 0s;
+    }
+
+    .three-map--labels-visible :deep(.map-label) {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      transition-delay: 0.2s;
     }
 
     .map-ring {
       position: absolute;
       left: 50%;
       top: 55%;
-      width: 820px;
-      height: 820px;
+      width: 920px;
+      height: 920px;
       transform: translate(-50%, -50%) rotateX(64deg) rotateZ(6deg);
       transform-style: preserve-3d;
       border-radius: 50%;
       background:
         repeating-radial-gradient(
           circle,
-          rgba(120, 220, 255, 0.22) 0,
-          rgba(120, 220, 255, 0.22) 1px,
-          transparent 1px,
-          transparent 18px
+          rgba(120, 220, 255, 0.38) 0,
+          rgba(120, 220, 255, 0.38) 1.2px,
+          transparent 1.2px,
+          transparent 14px
         );
       -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 74%, transparent 75%);
       mask: radial-gradient(circle, transparent 58%, #000 59%, #000 74%, transparent 75%);
@@ -221,8 +507,9 @@ onBeforeUnmount(() => {
       position: absolute;
       inset: 10%;
       border-radius: 50%;
-      border: 1px dashed rgba(130, 230, 255, 0.45);
-      opacity: 0.8;
+      border: 1.5px dashed rgba(160, 245, 255, 0.8);
+      opacity: 0.9;
+      box-shadow: 0 0 18px rgba(90, 220, 255, 0.45);
       animation: map-ring-rotate 40s linear infinite reverse;
     }
 
@@ -242,9 +529,9 @@ onBeforeUnmount(() => {
     }
 
     .ring-2 {
-      width: 660px;
-      height: 660px;
-      opacity: 0.55;
+      width: 760px;
+      height: 760px;
+      opacity: 0.6;
       filter: blur(0.4px);
       animation-duration: 34s;
       -webkit-mask: radial-gradient(circle, transparent 60%, #000 61%, #000 70%, transparent 71%);
@@ -252,9 +539,9 @@ onBeforeUnmount(() => {
     }
 
     .ring-3 {
-      width: 980px;
-      height: 980px;
-      opacity: 0.4;
+      width: 1120px;
+      height: 1120px;
+      opacity: 0.48;
       filter: blur(0.6px);
       animation-duration: 44s;
       -webkit-mask: radial-gradient(circle, transparent 66%, #000 67%, #000 74%, transparent 75%);

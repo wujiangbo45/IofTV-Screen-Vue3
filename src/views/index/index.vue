@@ -98,7 +98,7 @@ import HumanBodyView  from "./HumanBodyView.vue";
 
 .load-3 {
   animation-delay: 1.6s;
-  animation-duration: 2s;
+  animation-duration: 1.5s;
   animation-timing-function: ease-in-out;
 }
 

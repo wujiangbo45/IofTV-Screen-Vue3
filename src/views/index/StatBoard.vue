@@ -58,9 +58,10 @@
   <script setup>
   import { ref, onMounted } from 'vue'
   import BorderBoxNeo from "@/components/datav/border-box-neo";
+import { random } from 'lodash-es';
   
   const rawList = [
-    { title: '抚顺市昨日利润', unit: '万元', value: 103 },
+    { title: '抚顺市昨日利润', unit: '万元', value: random(0, 1000) },
     { title: '抚顺市昨日安装数', unit: '辆', value: 316 },
     { title: '抚顺市昨日签约企业数', unit: '个', value: 424 }
   ]

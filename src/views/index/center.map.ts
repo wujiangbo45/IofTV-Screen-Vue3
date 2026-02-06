@@ -14,6 +14,15 @@ export interface MapdataType {
 export interface ThreeMapInstance {
   init: (geojson: any, mapData: MapdataType[]) => void;
   update: (geojson: any, mapData: MapdataType[]) => void;
+  revealMarkers: () => void;
+  replaceMarkers: (mapData: MapdataType[]) => void;
+  updateLabels: (
+    list: {
+      name: string;
+      total?: number;
+      rate?: string;
+    }[]
+  ) => void;
   dispose: () => void;
 }
 
@@ -45,6 +54,9 @@ export const createThreeMap = (
   let markerRevealTimer: number | null = null;
   let markerRevealQueue: THREE.Object3D[] = [];
   let markerRevealIndex = 0;
+  let projectPointFn: ((lng: number, lat: number) => [number, number] | null) | null = null;
+  let markerRevealReady = false;
+  let markerRevealRequested = false;
   let revealBundles: THREE.Object3D[] = [];
   let mapRevealStart: number | null = null;
   let mapRevealFactor = 1;
@@ -199,7 +211,10 @@ const createGlowPathMaterial = () =>
   const startMarkerReveal = (delay = 80) => {
     stopMarkerReveal();
     markerRevealIndex = 0;
-    if (!markerGroup || markerRevealQueue.length === 0) return;
+    if (!markerGroup || markerRevealQueue.length === 0) {
+      markerRevealTimer = null;
+      return;
+    }
     const revealNext = () => {
       if (!markerGroup) return;
       if (markerRevealIndex >= markerRevealQueue.length) {
@@ -300,16 +315,16 @@ const createGlowPathMaterial = () =>
     if (markerGroup) {
       scene.remove(markerGroup);
       disposeGroup(markerGroup);
+      markerGroup = null;
     }
 
     mapGroup = new THREE.Group();
-    markerGroup = new THREE.Group();
-    if (labelRenderer) {
-      labelRenderer.domElement.innerHTML = "";
-    }
-    labelObjects = [];
-    activeLabelObject = null;
+    clearLabelElements();
     stopMarkerReveal();
+    markerRevealQueue = [];
+    markerRevealIndex = 0;
+    revealBundles = [];
+    markerRevealReady = false;
 
     pulseMeshes = [];
     const boundaryEdgeMap = new Map<string, EdgeRecord>();
@@ -326,13 +341,14 @@ const createGlowPathMaterial = () =>
     // 使用 d3 将地理坐标投影到屏幕坐标系
     const projection = d3.geoMercator().fitSize([width *30, height * 30], geojson);
 
-    const projectPoint = (lng: number, lat: number) => {
+    const projectPoint = (lng: number, lat: number): [number, number] | null => {
       const p = projection([lng, lat]);
       if (!p) return null;
       const x = p[0] - width / 2;
       const y = -(p[1] - height / 2);
-      return [x, y];
+      return [x, y] as [number, number];
     };
+    projectPointFn = projectPoint;
 
     // 挤出配置：提升三维厚度
     const extrudeSettings = {
@@ -526,175 +542,24 @@ const createGlowPathMaterial = () =>
       }
     }
 
-    // 标记数据：根据 total 按比例绘制柱状、光束及波纹
-    const maxVal = Math.max(
-      1,
-      ...mapData.map((d) => Number(d.total ?? 0)).filter((v) => Number.isFinite(v))
-    );
-
-    // 为每个城市绘制标记：标柱、光束、圆环、标签标细分件
-    mapData.forEach((d) => {
-      const lng = d.value[0];
-      const lat = d.value[1];
-      const projected = projectPoint(lng, lat);
-      if (!projected) return;
-      const heightScale = 0.55;
-      const heightValue = Number(d.total ?? 0);
-      const barHeight = (heightValue / maxVal) * 30 * heightScale + 2;
-      const markerBundle = new THREE.Group();
-
-      // 数据柱：高度按比例映射
-      const barGeo = new THREE.CylinderGeometry(2.8, 2.8, barHeight, 16, 1, false);
-      const barMat = new THREE.MeshStandardMaterial({
-        color: "#00eaff",
-        opacity: 0.85,
-        transparent: true,
-      });
-      const bar = new THREE.Mesh(barGeo, barMat);
-      bar.rotation.x = Math.PI / 2;
-      bar.position.set(projected[0], projected[1], barHeight / 2 + 2);
-      markerBundle.add(bar);
-
-      // 向上的光束，增强立体感
-      const beamGeo = new THREE.CylinderGeometry(0.5, 0.5, barHeight + 24, 18, 1, true);
-      const beamMat = new THREE.MeshBasicMaterial({
-        color: "#00ffff",
-        transparent: true,
-        opacity: 0.25,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
-      });
-      const beam = new THREE.Mesh(beamGeo, beamMat);
-      beam.rotation.x = Math.PI / 2;
-      beam.position.set(projected[0], projected[1], (barHeight + 24) / 2 + 2);
-      markerBundle.add(beam);
-
-      // 圆环波纹，配合呼吸动画
-      const ringGeo = new THREE.RingGeometry(7.8, 9.0, 64);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: "#00ffff",
-        transparent: true,
-        opacity: 0.5,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        depthTest: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -1,
-      });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.set(projected[0], projected[1], 4.6);
-      ring.renderOrder = 10;
-      markerBundle.add(ring);
-      pulseMeshes.push(ring);
-
-      // 外层光晕圆环，更柔和
-      const haloGeo = new THREE.RingGeometry(10.5, 12.5, 64);
-      const haloMat = new THREE.MeshBasicMaterial({
-        color: "#6affff",
-        transparent: true,
-        opacity: 0.18,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        depthTest: false,
-      });
-      const halo = new THREE.Mesh(haloGeo, haloMat);
-      halo.position.set(projected[0], projected[1], 4.8);
-      halo.renderOrder = 9;
-      markerBundle.add(halo);
-      pulseMeshes.push(halo);
-
-      // 底部圆盘，稳定视觉中心
-      const baseDiskGeo = new THREE.CircleGeometry(4.6, 48);
-      const baseDiskMat = new THREE.MeshBasicMaterial({
-        color: "rgb(197, 217, 236)",
-        transparent: true,
-        opacity: 0.35,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      const baseDisk = new THREE.Mesh(baseDiskGeo, baseDiskMat);
-      baseDisk.position.set(projected[0], projected[1], 4.7);
-      baseDisk.renderOrder = 11;
-      markerBundle.add(baseDisk);
-
-      // 内核小球，增强亮点
-      const coreGeo = new THREE.SphereGeometry(2.2, 16, 16);
-      const coreMat = new THREE.MeshBasicMaterial({ color: "#7ffcff" });
-      const core = new THREE.Mesh(coreGeo, coreMat);
-      core.position.set(projected[0], projected[1], barHeight + 6);
-      markerBundle.add(core);
-
-      // 构建标签的 DOM 结构，用 CSS2DRenderer 浮在三维场景上方
-      const label = document.createElement("div");
-      label.className = "map-label";
-      label.style.pointerEvents = "auto";
-      label.style.cursor = "pointer";
-      const elevateLabel = (active: boolean) => {
-        const el = label as HTMLDivElement;
-        const selected = el.dataset.selected === "true";
-        if (active || selected) {
-          el.style.zIndex = "20";
-          el.style.transform = "translateY(-2px)";
-        } else {
-          el.style.zIndex = "";
-          el.style.transform = "";
-        }
-      };
-      label.addEventListener("mouseenter", () => elevateLabel(true));
-      label.addEventListener("mouseleave", () => elevateLabel(false));
-      label.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        if (d.name) {
-          const meshes = regionMeshMap[d.name] ?? [];
-          setSelectedRegion(d.name, meshes);
-        }
-        options?.onLabelClick?.(d);
-      });
-      // 标题与数据行，按方例水平对齐
-      const title = document.createElement("div");
-      title.className = "map-label__title";
-      title.textContent = d.name;
-      const row1 = document.createElement("div");
-      row1.className = "map-label__row";
-      row1.textContent = `签约企业数: ${d.total ?? "-"}`;
-      const row2 = document.createElement("div");
-      row2.className = "map-label__row";
-      row2.textContent = `签约企业占比: ${d.rate ?? "-"}`;
-      label.appendChild(title);
-      label.appendChild(row1);
-      label.appendChild(row2);
-
-      const labelObj = new CSS2DObject(label);
-      // Label height offset (increase to raise the sign)
-      labelObj.position.set(projected[0], projected[1], barHeight + 58);
-      labelObj.userData.basePosition = labelObj.position.clone();
-      labelObj.userData.baseZ = labelObj.position.z;
-      labelObj.userData.regionName = d.name ?? "";
-      markerBundle.add(labelObj);
-      markerBundle.userData.labelObj = labelObj;
-      markerRevealQueue.push(markerBundle);
-    });
+    rebuildMarkerLayer(mapData);
     
     scene.add(mapGroup);
-    scene.add(markerGroup);
 
     const box = new THREE.Box3().setFromObject(mapGroup);
     const center = new THREE.Vector3();
     box.getCenter(center);
-    mapGroup.position.sub(center);
-    markerGroup.position.sub(center);
-    // Move map upward (adjust this offset as needed)
-    mapGroup.position.y += 100;
-    markerGroup.position.y += 100;
+    offsetGroupPosition(mapGroup, center);
+    offsetGroupPosition(markerGroup, center);
     mapRevealFactor = 0;
     mapRevealStart = null;
     mapRevealPending = true;
     mapRevealDelayFrames = 5;
     applyGroupOpacity(mapGroup, 0);
-    startMarkerReveal();
+    markerRevealReady = true;
+    if (markerRevealRequested) {
+      startMarkerReveal();
+    }
   };
 
   // 容器尺寸变化时，重置相机并重新构建地图
@@ -1023,6 +888,248 @@ const createGlowPathMaterial = () =>
     buildMap(geojson, mapData, width, height);
   };
 
+  const revealMarkers = () => {
+    markerRevealRequested = true;
+    if (!markerRevealReady) return;
+    startMarkerReveal();
+  };
+
+  const updateLabels = (
+    list: {
+      name: string;
+      total?: number;
+      rate?: string;
+    }[] = []
+  ) => {
+    if (!list.length || labelObjects.length === 0) return;
+    const dataMap = new Map(list.filter((item) => item && item.name).map((item) => [item.name, item]));
+    if (dataMap.size === 0) return;
+    labelObjects.forEach((obj) => {
+      const regionName = (obj.userData?.regionName as string | undefined) ?? "";
+      if (!regionName) return;
+      const payload = dataMap.get(regionName);
+      if (!payload) return;
+      const el = obj.element as HTMLElement;
+      const titleEl = el.querySelector(".map-label__title");
+      if (titleEl && payload.name) {
+        titleEl.textContent = payload.name;
+      }
+      const rows = el.querySelectorAll(".map-label__row");
+      if (rows[0]) {
+        rows[0].textContent = `签约企业数: ${payload.total ?? "-"}`;
+      }
+      if (rows[1]) {
+        rows[1].textContent = `签约企业占比: ${payload.rate ?? "-"}`;
+      }
+    });
+  };
+
+  const clearLabelElements = () => {
+    labelObjects = [];
+    activeLabelObject = null;
+    if (labelRenderer) {
+      labelRenderer.domElement.innerHTML = "";
+    }
+  };
+
+  const cloneTransform = (obj: THREE.Object3D | null) => {
+    if (!obj) return null;
+    return {
+      position: obj.position.clone(),
+      quaternion: obj.quaternion.clone(),
+      scale: obj.scale.clone(),
+    };
+  };
+
+  const applyTransform = (obj: THREE.Object3D, transform: ReturnType<typeof cloneTransform> | null) => {
+    if (!transform) return;
+    obj.position.copy(transform.position);
+    obj.quaternion.copy(transform.quaternion);
+    obj.scale.copy(transform.scale);
+  };
+
+  const offsetGroupPosition = (group: THREE.Group | null, center: THREE.Vector3, lift = 100) => {
+    if (!group) return;
+    group.position.sub(center);
+    group.position.y += lift;
+  };
+
+  const rebuildMarkerLayer = (
+    mapData: MapdataType[],
+    config?: {
+      preserveTransform?: boolean;
+    }
+  ) => {
+    if (!scene) return;
+    const previousTransform = config?.preserveTransform ? cloneTransform(markerGroup) : null;
+    if (markerGroup) {
+      scene.remove(markerGroup);
+      disposeGroup(markerGroup);
+    }
+    markerGroup = new THREE.Group();
+    if (previousTransform) {
+      applyTransform(markerGroup, previousTransform);
+    } else if (mapGroup) {
+      applyTransform(markerGroup, cloneTransform(mapGroup));
+    }
+    scene.add(markerGroup);
+
+    clearLabelElements();
+    stopMarkerReveal();
+    markerRevealQueue = [];
+    markerRevealIndex = 0;
+    revealBundles = [];
+    pulseMeshes = [];
+
+    const maxVal = Math.max(
+      1,
+      ...mapData.map((d) => Number(d.total ?? 0)).filter((v) => Number.isFinite(v))
+    );
+
+    const projector = projectPointFn;
+    mapData.forEach((d) => {
+      if (!projector) return;
+      const lng = d.value[0];
+      const lat = d.value[1];
+      const projected = projector(lng, lat);
+      if (!projected) return;
+      const heightScale = 0.55;
+      const heightValue = Number(d.total ?? 0);
+      const barHeight = (heightValue / maxVal) * 30 * heightScale + 2;
+      const markerBundle = new THREE.Group();
+
+      const barGeo = new THREE.CylinderGeometry(2.8, 2.8, barHeight, 16, 1, false);
+      const barMat = new THREE.MeshStandardMaterial({
+        color: "#00eaff",
+        opacity: 0.85,
+        transparent: true,
+      });
+      const bar = new THREE.Mesh(barGeo, barMat);
+      bar.rotation.x = Math.PI / 2;
+      bar.position.set(projected[0], projected[1], barHeight / 2 + 2);
+      markerBundle.add(bar);
+
+      const beamGeo = new THREE.CylinderGeometry(0.5, 0.5, barHeight + 24, 18, 1, true);
+      const beamMat = new THREE.MeshBasicMaterial({
+        color: "#00ffff",
+        transparent: true,
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+      });
+      const beam = new THREE.Mesh(beamGeo, beamMat);
+      beam.rotation.x = Math.PI / 2;
+      beam.position.set(projected[0], projected[1], (barHeight + 24) / 2 + 2);
+      markerBundle.add(beam);
+
+      const ringGeo = new THREE.RingGeometry(7.8, 9.0, 64);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: "#00ffff",
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.set(projected[0], projected[1], 4.6);
+      ring.renderOrder = 10;
+      markerBundle.add(ring);
+      pulseMeshes.push(ring);
+
+      const haloGeo = new THREE.RingGeometry(10.5, 12.5, 64);
+      const haloMat = new THREE.MeshBasicMaterial({
+        color: "#6affff",
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: false,
+      });
+      const halo = new THREE.Mesh(haloGeo, haloMat);
+      halo.position.set(projected[0], projected[1], 4.8);
+      halo.renderOrder = 9;
+      markerBundle.add(halo);
+      pulseMeshes.push(halo);
+
+      const baseDiskGeo = new THREE.CircleGeometry(4.6, 48);
+      const baseDiskMat = new THREE.MeshBasicMaterial({
+        color: "rgb(197, 217, 236)",
+        transparent: true,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const baseDisk = new THREE.Mesh(baseDiskGeo, baseDiskMat);
+      baseDisk.position.set(projected[0], projected[1], 4.7);
+      baseDisk.renderOrder = 11;
+      markerBundle.add(baseDisk);
+
+      const coreGeo = new THREE.SphereGeometry(2.2, 16, 16);
+      const coreMat = new THREE.MeshBasicMaterial({ color: "#7ffcff" });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      core.position.set(projected[0], projected[1], barHeight + 6);
+      markerBundle.add(core);
+
+      const label = document.createElement("div");
+      label.className = "map-label";
+      label.style.pointerEvents = "auto";
+      label.style.cursor = "pointer";
+      const elevateLabel = (active: boolean) => {
+        const el = label as HTMLDivElement;
+        const selected = el.dataset.selected === "true";
+        if (active || selected) {
+          el.style.zIndex = "20";
+          el.style.transform = "translateY(-2px)";
+        } else {
+          el.style.zIndex = "";
+          el.style.transform = "";
+        }
+      };
+      label.addEventListener("mouseenter", () => elevateLabel(true));
+      label.addEventListener("mouseleave", () => elevateLabel(false));
+      label.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        if (d.name) {
+          const meshes = regionMeshMap[d.name] ?? [];
+          setSelectedRegion(d.name, meshes);
+        }
+        options?.onLabelClick?.(d);
+      });
+      const title = document.createElement("div");
+      title.className = "map-label__title";
+      title.textContent = d.name;
+      const row1 = document.createElement("div");
+      row1.className = "map-label__row";
+      row1.textContent = `签约企业数: ${d.total ?? "-"}`;
+      const row2 = document.createElement("div");
+      row2.className = "map-label__row";
+      row2.textContent = `签约企业占比: ${d.rate ?? "-"}`;
+      label.appendChild(title);
+      label.appendChild(row1);
+      label.appendChild(row2);
+
+      const labelObj = new CSS2DObject(label);
+      labelObj.position.set(projected[0], projected[1], barHeight + 58);
+      labelObj.userData.basePosition = labelObj.position.clone();
+      labelObj.userData.baseZ = labelObj.position.z;
+      labelObj.userData.regionName = d.name ?? "";
+      markerBundle.add(labelObj);
+      markerBundle.userData.labelObj = labelObj;
+      markerRevealQueue.push(markerBundle);
+    });
+
+    markerRevealReady = true;
+    if (markerRevealRequested) {
+      startMarkerReveal();
+    }
+  };
+
   // 释放资源：清理事件、渲染器和几何/材质
   const dispose = () => {
     cancelAnimationFrame(animationId);
@@ -1071,9 +1178,16 @@ const createGlowPathMaterial = () =>
     mapRevealDelayFrames = 0;
     lastGeojson = null;
     lastData = [];
+    markerRevealRequested = false;
+    markerRevealReady = false;
+    projectPointFn = null;
   };
 
-  return { init, update, dispose };
+  const replaceMarkers = (mapData: MapdataType[]) => {
+    rebuildMarkerLayer(mapData, { preserveTransform: true });
+  };
+
+  return { init, update, revealMarkers, replaceMarkers, updateLabels, dispose };
 };
 
 export const regionCodes: any = {
