@@ -45,17 +45,51 @@
   });
   
   /* ================= 数据（偏暖蓝） ================= */
+  const palette = [
+    "#ff7404",
+    "#0089e6",
+    "#4ff8ff",
+    "#048aff"
+  ];
   const data = [
-    { name: "中国人民财产保险有限公司", value: 1048, color: "#6fd7ff" },
-    { name: "平安", value: 735,  color: "#4aa3ff" },
-    { name: "太平洋", value: 580, color: "#7bc6ff" },
-    { name: "中意", value: 484,  color: "#ffd24a" }
+    { name: "中国人民财产保险有限公司", value: 1048, color: palette[0] },
+    { name: "平安", value: 735,  color: palette[1] },
+    { name: "太平洋", value: 580, color: palette[2] },
+    { name: "中意", value: 484,  color: palette[3] }
   ];
   const total = data.reduce((s, d) => s + d.value, 0);
   
   /* ================= 中心文字 ================= */
   let centerSprite: THREE.Sprite;
-  
+
+  function createGlowTexture() {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    const grd = ctx.createRadialGradient(
+      size / 2,
+      size / 2,
+      size * 0.25,
+      size / 2,
+      size / 2,
+      size * 0.5
+    );
+    grd.addColorStop(0, "rgba(255,255,255,0.0)");
+    grd.addColorStop(0.45, "rgba(255,255,255,0.15)");
+    grd.addColorStop(0.7, "rgba(255,255,255,0.55)");
+    grd.addColorStop(1, "rgba(255,255,255,0.0)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, size, size);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    return texture;
+  }
+
   function updateCenterText(text: string) {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
@@ -92,8 +126,8 @@
     renderer.setPixelRatio(window.devicePixelRatio);
     el.appendChild(renderer.domElement);
     scene.background = null;
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    const light = new THREE.DirectionalLight(0xffffff, 0.9);
+    scene.add(new THREE.AmbientLight(0xbfefff, 0.85));
+    const light = new THREE.DirectionalLight(0xdff5ff, 5.25);
     light.position.set(6, 52, 8);
     scene.add(light);
   }
@@ -161,6 +195,7 @@
   /* ================= 底座 ================= */
   function createBase() {
     baseGroup = new THREE.Group();
+    const glowTexture = createGlowTexture();
 
     const planeGeo = new THREE.CircleGeometry(8.2, 96);
     const planeMat = new THREE.MeshStandardMaterial({
@@ -177,13 +212,16 @@
     baseGroup.add(plane);
 
     const glow = new THREE.Mesh(
-      new THREE.RingGeometry(7.6, 8.2, 128),
+      new THREE.RingGeometry(7.0, 8.8, 128),
       new THREE.MeshBasicMaterial({
-        color: "#8fe9ff",
+        color: "#88cbe6",
         transparent: true,
-        opacity: 0.75,
+        opacity: 0.48,
+        map: glowTexture,
+        alphaMap: glowTexture,
+        depthWrite: false,
         side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending
+        blending: THREE.NormalBlending
       })
     );
     glow.rotation.x = -Math.PI / 2;
@@ -191,13 +229,16 @@
     baseGroup.add(glow);
 
     const glow2 = new THREE.Mesh(
-      new THREE.RingGeometry(6.45, 7.05, 128),
+      new THREE.RingGeometry(5.8, 7.5, 128),
       new THREE.MeshBasicMaterial({
-        color: "#5fd1ff",
+        color: "#7fc2dc",
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.4,
+        map: glowTexture,
+        alphaMap: glowTexture,
+        depthWrite: false,
         side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending
+        blending: THREE.NormalBlending
       })
     );
     glow2.rotation.x = -Math.PI / 2;
@@ -205,13 +246,16 @@
     baseGroup.add(glow2);
 
     const halo1 = new THREE.Mesh(
-      new THREE.RingGeometry(8.2, 8.9, 128),
+      new THREE.RingGeometry(8.2, 9.8, 128),
       new THREE.MeshBasicMaterial({
-        color: "#6fe0ff",
+        color: "#9ad7ee",
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.3,
+        map: glowTexture,
+        alphaMap: glowTexture,
+        depthWrite: false,
         side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending
+        blending: THREE.NormalBlending
       })
     );
     halo1.rotation.x = -Math.PI / 2;
@@ -219,13 +263,16 @@
     baseGroup.add(halo1);
 
     const halo2 = new THREE.Mesh(
-      new THREE.RingGeometry(5.6, 6.1, 128),
+      new THREE.RingGeometry(5.0, 6.8, 128),
       new THREE.MeshBasicMaterial({
-        color: "#4fbfff",
+        color: "#76b9d6",
         transparent: true,
-        opacity: 0.22,
+        opacity: 1.58,
+        map: glowTexture,
+        alphaMap: glowTexture,
+        depthWrite: false,
         side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending
+        blending: THREE.NormalBlending
       })
     );
     halo2.rotation.x = -Math.PI / 2;

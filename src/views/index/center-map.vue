@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="centermap">
     <div class="mapwrap">
-      <StatBoard/>
+      <StatBoard class="stat-board-pos"/>
       <SearchPane class="search-pane-pos" />
       <!-- <div class="quanguo" @click="getData('china')" v-if="code !== 'china'">中国</div> -->
       <div class="three-map" ref="containerRef"></div>
@@ -192,6 +192,12 @@ onBeforeUnmount(() => {
       right: 0px;
       bottom: 24px;
       z-index: 12;
+    }
+
+    .stat-board-pos {
+      position: relative;
+      z-index: 10;
+      margin-top: -2px;
     }
   }
 }

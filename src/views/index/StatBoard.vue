@@ -1,5 +1,6 @@
 <template>
-    <div class="stat-board">
+    <BorderBoxNeo class="stat-board">
+      <div class="stat-board-inner">
       <!-- 左侧凹槽箭头 -->
       <div class="edge-arrow left">
         <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -50,11 +51,13 @@
           <path d="M12.5 5.5L19 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.55" />
         </svg>
       </div>
-    </div>
+      </div>
+    </BorderBoxNeo>
   </template>
   
   <script setup>
   import { ref, onMounted } from 'vue'
+  import BorderBoxNeo from "@/components/datav/border-box-neo";
   
   const rawList = [
     { title: '抚顺市昨日利润', unit: '万元', value: 103 },
@@ -117,42 +120,33 @@
   <style scoped lang="scss">
   /* ===== 外框 ===== */
   .stat-board {
+    position: relative;
+    width: 100%;
+    height: auto;
+  }
+
+  :deep(.dv-border-box-content) {
+    box-sizing: border-box;
+    padding: 0;
+  }
+
+  :deep(.dv-border-box-neo .dv-border-svg-container rect:first-of-type) {
+    stroke-width: 3.5px;
+  }
+
+  :deep(.dv-border-box-neo .dv-border-svg-container rect:nth-of-type(2)) {
+    stroke-width: 2px;
+    stroke-opacity: 0.55;
+  }
+
+  .stat-board-inner {
     display: flex;
     align-items: center;
-    padding: 18px 30px;
-    background: linear-gradient(180deg, #0b2c5f, #071c3a);
-    border-radius: 10px;
-    position: relative;
-    transform: perspective(900px) rotateX(0deg);
-    transform-style: preserve-3d;
-    box-shadow:
-      inset 0 0 30px rgba(0, 180, 255, 0.35),
-      0 12px 24px rgba(2, 10, 28, 0.6),
-      0 0 40px rgba(0, 120, 255, 0.35);
-  }
-
-  .stat-board::before {
-    content: '';
-    position: absolute;
-    inset: 6px;
+    padding: 28px 28px 28px;
+    height: auto;
     border-radius: 8px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 45%);
-    transform: translateZ(6px);
-    pointer-events: none;
-  }
-
-  .stat-board::after {
-    content: '';
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: -12px;
-    height: 12px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse at center, rgba(0, 200, 255, 0.35), transparent 70%);
-    filter: blur(6px);
-    transform: translateZ(-10px);
-    pointer-events: none;
+    background: transparent;
+    box-shadow: none;
   }
   
   /* ===== 凹槽发光箭头 ===== */
@@ -161,7 +155,7 @@
     height: 102px;
     position: relative;
     border-radius: 6px;
-    background: linear-gradient(180deg, #071a33, #0b2c5f);
+    background: linear-gradient(180deg, #071a33, #0a3c78);
     box-shadow:
       inset 2px 0 6px rgba(0, 0, 0, 0.6),
       inset -2px 0 6px rgba(0, 0, 0, 0.6);
@@ -177,7 +171,7 @@
     background: linear-gradient(
       180deg,
       transparent,
-      #00eaff,
+      rgba(0, 210, 255, 0.9),
       transparent
     );
     filter: blur(1px);
@@ -192,10 +186,9 @@
     width: 18px;
     height: 18px;
     margin: auto;
-    color: #dfffff;
+    color: #c9f3ff;
     filter:
-      drop-shadow(0 0 6px rgba(0, 234, 255, 0.9))
-      drop-shadow(0 0 12px rgba(0, 234, 255, 0.6));
+      drop-shadow(0 0 6px rgba(0, 220, 255, 0.75));
   }
   
   .edge-arrow.right {
@@ -211,28 +204,32 @@
   
   .title {
     font-size: 16px;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
     color: #e6f6ff;
     font-weight: 700;
     letter-spacing: 0.6px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 2px 8px;
+    padding: 1px 8px;
     border-radius: 8px;
-    background: linear-gradient(180deg, rgba(8, 26, 54, 0.45), rgba(5, 14, 28, 0.65));
-    box-shadow: inset 0 0 6px rgba(70, 210, 255, 0.12);
-    text-shadow: none;
+    background: linear-gradient(
+      180deg,
+      rgba(8, 30, 58, 0.55),
+      rgba(6, 18, 36, 0.75)
+    );
+    box-shadow: inset 0 0 6px rgba(70, 210, 255, 0.1);
+    text-shadow: 0 0 6px rgba(0, 140, 210, 0.25);
     -webkit-font-smoothing: antialiased;
     text-rendering: geometricPrecision;
   
     .unit {
       font-size: 13px;
-      opacity: 0.7;
-      color: #92e8ff;
+      opacity: 0.75;
+      color: #9fe9ff;
       padding: 1px 6px;
       border-radius: 6px;
-      background: rgba(40, 160, 210, 0.18);
+      background: rgba(40, 160, 210, 0.14);
     }
   }
   
@@ -260,16 +257,16 @@
     border-radius: 6px;
     background: linear-gradient(
       180deg,
-      #1b63ff 0%,
-      #0a2e8a 46%,
-      rgba(2, 8, 18, 0.65) 50%,
-      #0a2e8a 54%,
-      #0a2e8a 100%
+      rgba(16, 98, 185, 0.95) 0%,
+      rgba(8, 58, 130, 0.95) 48%,
+      rgba(2, 8, 18, 0.7) 50%,
+      rgba(8, 58, 130, 0.95) 52%,
+      rgba(8, 58, 130, 0.95) 100%
     );
     box-shadow:
-      inset 0 0 10px rgba(0, 200, 255, 0.9),
-      0 6px 12px rgba(5, 20, 40, 0.6),
-      0 0 14px rgba(0, 120, 255, 0.7);
+      inset 0 0 10px rgba(0, 200, 255, 0.55),
+      0 6px 12px rgba(5, 20, 40, 0.55),
+      0 0 10px rgba(0, 120, 255, 0.4);
     overflow: hidden;
     z-index: 0;
   }
@@ -322,7 +319,7 @@
     font-size: 42px;
     font-weight: bold;
     color: #ffffff;
-    text-shadow: 0 0 6px rgba(0, 200, 255, 0.8);
+    text-shadow: 0 0 6px rgba(0, 200, 255, 0.45);
     backface-visibility: hidden;
     background: transparent;
     z-index: 1;

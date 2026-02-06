@@ -12,7 +12,6 @@ import HumanBodyView  from "./HumanBodyView.vue";
 
 <template>
   <div class="index-box">
-    <div class="screen-title">保险核算统计大屏</div>
     <div class="contetn_left">
       <!-- <div class="pagetab">
         <div class="item">实时监测</div>
