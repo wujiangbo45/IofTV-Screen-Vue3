@@ -120,6 +120,9 @@ onBeforeUnmount(() => {
 <template>
   <div class="centermap">
     <div class="mapwrap">
+      <div class="map-ring ring-1"></div>
+      <div class="map-ring ring-2"></div>
+      <div class="map-ring ring-3"></div>
       <StatBoard class="stat-board-pos"/>
       <SearchPane class="search-pane-pos" />
       <!-- <div class="quanguo" @click="getData('china')" v-if="code !== 'china'">中国</div> -->
@@ -187,6 +190,77 @@ onBeforeUnmount(() => {
       z-index: 2;
     }
 
+    .map-ring {
+      position: absolute;
+      left: 50%;
+      top: 55%;
+      width: 820px;
+      height: 820px;
+      transform: translate(-50%, -50%) rotateX(64deg) rotateZ(6deg);
+      transform-style: preserve-3d;
+      border-radius: 50%;
+      background:
+        repeating-radial-gradient(
+          circle,
+          rgba(120, 220, 255, 0.22) 0,
+          rgba(120, 220, 255, 0.22) 1px,
+          transparent 1px,
+          transparent 18px
+        );
+      -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 74%, transparent 75%);
+      mask: radial-gradient(circle, transparent 58%, #000 59%, #000 74%, transparent 75%);
+      filter: blur(0.3px);
+      opacity: 0.65;
+      z-index: 1;
+      pointer-events: none;
+      animation: map-ring-rotate 28s linear infinite;
+    }
+
+    .map-ring::after {
+      content: "";
+      position: absolute;
+      inset: 10%;
+      border-radius: 50%;
+      border: 1px dashed rgba(130, 230, 255, 0.45);
+      opacity: 0.8;
+      animation: map-ring-rotate 40s linear infinite reverse;
+    }
+
+    .map-ring::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(140, 230, 255, 0.9) 0 1.5px, transparent 2.5px) 18% 30% / 160px 160px,
+        radial-gradient(circle, rgba(120, 220, 255, 0.7) 0 1px, transparent 2px) 72% 58% / 180px 180px,
+        radial-gradient(circle, rgba(110, 210, 255, 0.6) 0 1px, transparent 2px) 42% 82% / 200px 200px;
+      opacity: 0.7;
+      filter: blur(0.4px);
+      pointer-events: none;
+      animation: map-ring-rotate 30s linear infinite;
+    }
+
+    .ring-2 {
+      width: 660px;
+      height: 660px;
+      opacity: 0.55;
+      filter: blur(0.4px);
+      animation-duration: 34s;
+      -webkit-mask: radial-gradient(circle, transparent 60%, #000 61%, #000 70%, transparent 71%);
+      mask: radial-gradient(circle, transparent 60%, #000 61%, #000 70%, transparent 71%);
+    }
+
+    .ring-3 {
+      width: 980px;
+      height: 980px;
+      opacity: 0.4;
+      filter: blur(0.6px);
+      animation-duration: 44s;
+      -webkit-mask: radial-gradient(circle, transparent 66%, #000 67%, #000 74%, transparent 75%);
+      mask: radial-gradient(circle, transparent 66%, #000 67%, #000 74%, transparent 75%);
+    }
+
     .search-pane-pos {
       position: absolute;
       right: 0px;
@@ -199,6 +273,12 @@ onBeforeUnmount(() => {
       z-index: 10;
       margin-top: -2px;
     }
+  }
+}
+
+@keyframes map-ring-rotate {
+  to {
+    transform: translate(-50%, -50%) rotateX(62deg) rotateZ(368deg);
   }
 }
 

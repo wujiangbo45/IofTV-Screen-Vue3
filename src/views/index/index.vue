@@ -98,6 +98,8 @@ import HumanBodyView  from "./HumanBodyView.vue";
 
 .load-3 {
   animation-delay: 1.6s;
+  animation-duration: 2s;
+  animation-timing-function: ease-in-out;
 }
 
 @keyframes screen-title-fade {
