@@ -464,10 +464,9 @@ onBeforeUnmount(() => {
     .three-map :deep(.map-label) {
       opacity: 0;
       transform: translateY(18px) scale(0.94);
-      transition:
-        opacity 0.55s ease,
-        transform 0.55s ease;
+      transition: opacity 0.55s ease;
       transition-delay: 0s;
+      will-change: opacity;
     }
 
     .three-map--labels-visible :deep(.map-label) {
