@@ -3,7 +3,7 @@
     <!-- 上方 cube -->
     <div class="cube-row">
       <CubePercent
-        v-for="item in cubes"
+        v-for="item in displayCubes"
         :key="item.id"
         :id="item.id"
         :percent="item.percent"
@@ -38,6 +38,14 @@ import { ref, computed } from "vue"
 import CubePercent from "./CubePercent.vue"
 
 const cubes = [
+  {
+    id: "",
+    rows: [
+      { label: "满期保费", value: 895000 },
+      { label: "赔款金额", value: 35000 },
+      { label: "满期赔付率", value: 115 },
+    ],
+  },
   {
     id: "a",
     label: "安装占比",
@@ -76,18 +84,28 @@ const cubes = [
   },
 ]
 
-const activeId = ref<string | null>(null)
+const defaultActiveId = ""
+const activeId = ref<string>(defaultActiveId)
 
-const active = computed(() =>
-  cubes.find(i => i.id === activeId.value)
+const displayCubes = computed(() =>
+  cubes.filter(i => i.id !== "")
 )
+
+const active = computed(() => {
+  const targetId = activeId.value
+  return (
+    cubes.find(i => i.id === targetId) ??
+    cubes.find(i => i.id === defaultActiveId) ??
+    cubes[0]
+  )
+})
 
 const onHover = (id: string) => {
   activeId.value = id
 }
 
 const onLeave = () => {
-  activeId.value = null
+  activeId.value = defaultActiveId
 }
 
 const format = (num: number) =>
@@ -109,7 +127,8 @@ const format = (num: number) =>
 
 /* 箭头区域 */
 .arrow-panel {
-  margin-top: 36px;
+  margin-top: 33px;
+  margin-right: 23px;
 }
 
 .arrow-row {

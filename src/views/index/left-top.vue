@@ -4,7 +4,7 @@ import { countDeviceNum } from "@/api";
 import CountUp from "@/components/count-up";
 import {ElMessage} from "element-plus"
 import RingDashboard from "./RingDashboard.vue";
-
+import Ring3DChat from "./Ring3DChat.vue";
 const duration = ref(2);
 const state = reactive({
   alarmNum: 0,
@@ -33,7 +33,7 @@ getData();
 </script>
 
 <template>
-  <RingDashboard/>
+  <Ring3DChat/>
 </template>
 
 <style scoped lang="scss">

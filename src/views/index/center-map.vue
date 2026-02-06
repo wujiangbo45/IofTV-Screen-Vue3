@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { centerMap, GETNOBASE } from "@/api";
 import { ElMessage } from "element-plus";
@@ -100,7 +100,7 @@ onMounted(() => {
         if (xzqData) {
           getData(xzqData.adcode);
         } else {
-          window["$message"].warning("暂无地市");
+          // window["$message"].warning("暂无地市");
         }
       },
       onLabelClick: (data) => {
@@ -227,6 +227,17 @@ onBeforeUnmount(() => {
       0 10px 24px rgba(0, 0, 0, 0.35),
       0 0 28px rgba(80, 220, 255, 0.85),
       0 0 46px rgba(80, 220, 255, 0.55);
+    transform: translateY(-1px);
+  }
+  :deep(.map-label--active) {
+    z-index: 999;
+    border-color: rgba(170, 250, 255, 0.95);
+    box-shadow:
+      inset 0 0 0 1px rgba(150, 235, 255, 0.6),
+      inset 0 0 26px rgba(90, 220, 255, 0.45),
+      0 12px 26px rgba(0, 0, 0, 0.38),
+      0 0 32px rgba(90, 230, 255, 0.95),
+      0 0 56px rgba(90, 230, 255, 0.65);
     transform: translateY(-1px);
   }
   :deep(.map-label)::after {

@@ -42,6 +42,14 @@ export const createThreeMap = (
   let markerGroup: THREE.Group | null = null;
   let pulseMeshes: THREE.Object3D[] = [];
   let labelObjects: CSS2DObject[] = [];
+  let markerRevealTimer: number | null = null;
+  let markerRevealQueue: THREE.Object3D[] = [];
+  let markerRevealIndex = 0;
+  let revealBundles: THREE.Object3D[] = [];
+  let mapRevealStart: number | null = null;
+  let mapRevealFactor = 1;
+  let mapRevealPending = false;
+  let mapRevealDelayFrames = 0;
   let activeLabelObject: CSS2DObject | null = null;
   let glowPathMaterials: THREE.ShaderMaterial[] = [];
   let regionMeshes: THREE.Mesh[] = [];
@@ -53,12 +61,29 @@ export const createThreeMap = (
   let selectedRegionKey: string | null = null;
   let selectedRegionMeshes: THREE.Mesh[] = [];
   let regionMeshMap: Record<string, THREE.Mesh[]> = {};
+  const updateLabelHighlight = (regionName: string | null) => {
+    labelObjects.forEach((obj) => {
+      const el = obj.element as HTMLElement;
+      const name = (obj.userData?.regionName as string | undefined) ?? "";
+      const active = Boolean(regionName && name === regionName);
+      el.classList.toggle("map-label--active", active);
+      el.dataset.selected = active ? "true" : "";
+      if (active) {
+        el.style.zIndex = "20";
+        el.style.transform = "translateY(-2px)";
+      } else {
+        el.style.zIndex = "";
+        el.style.transform = "";
+      }
+    });
+  };
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
 
   // 纹理加载器：用于地图顶面纹理贴图
-const textureLoader = new THREE.TextureLoader();
+  const textureLoader = new THREE.TextureLoader();
+  let mapTexture: THREE.Texture | null = null;
   // 提取地图外边线：用于画直边菜单光晕
 type EdgeRecord = {
   a: THREE.Vector3;
@@ -156,12 +181,96 @@ const createGlowPathMaterial = () =>
       }
     `,
   });
-// const mapTexture = textureLoader.load(mapTextureUrl);
-  // mapTexture.colorSpace = THREE.SRGBColorSpace;
-  // mapTexture.wrapS = THREE.ClampToEdgeWrapping;  // 避免重�
-  // mapTexture.wrapT = THREE.ClampToEdgeWrapping;
-  // mapTexture.repeat.set(1, 1);                  // 整张图片覆盖
-  // mapTexture.offset.set(0, 0);
+  const getMapTexture = () => {
+    if (mapTexture) return mapTexture;
+    mapTexture = textureLoader.load(mapTextureUrl);
+    mapTexture.colorSpace = THREE.SRGBColorSpace;
+    mapTexture.wrapS = THREE.ClampToEdgeWrapping;
+    mapTexture.wrapT = THREE.ClampToEdgeWrapping;
+    return mapTexture;
+  };
+  const stopMarkerReveal = () => {
+    if (markerRevealTimer !== null) {
+      clearTimeout(markerRevealTimer);
+      markerRevealTimer = null;
+    }
+  };
+
+  const startMarkerReveal = (delay = 80) => {
+    stopMarkerReveal();
+    markerRevealIndex = 0;
+    if (!markerGroup || markerRevealQueue.length === 0) return;
+    const revealNext = () => {
+      if (!markerGroup) return;
+      if (markerRevealIndex >= markerRevealQueue.length) {
+        markerRevealTimer = null;
+        return;
+      }
+      const bundle = markerRevealQueue[markerRevealIndex++];
+      (bundle as any).userData.revealStart = performance.now();
+      applyBundleOpacity(bundle, 0);
+      markerGroup.add(bundle);
+      revealBundles.push(bundle);
+      const labelObj = (bundle as any).userData?.labelObj as CSS2DObject | undefined;
+      if (labelObj) {
+        labelObjects.push(labelObj);
+        updateLabelHighlight(selectedRegionKey);
+      }
+      markerRevealTimer = window.setTimeout(revealNext, delay);
+    };
+    markerRevealTimer = window.setTimeout(revealNext, delay);
+  };
+
+  const applyBundleOpacity = (bundle: THREE.Object3D, opacity: number) => {
+    bundle.traverse((obj: any) => {
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach((m: any) => {
+            if (m.userData?.baseOpacity === undefined) {
+              if (!m.userData) m.userData = {};
+              m.userData.baseOpacity = m.opacity ?? 1;
+            }
+            m.transparent = true;
+            m.opacity = (m.userData.baseOpacity ?? 1) * opacity;
+          });
+        } else {
+          if (obj.material.userData?.baseOpacity === undefined) {
+            if (!obj.material.userData) obj.material.userData = {};
+            obj.material.userData.baseOpacity = obj.material.opacity ?? 1;
+          }
+          obj.material.transparent = true;
+          obj.material.opacity = (obj.material.userData.baseOpacity ?? 1) * opacity;
+        }
+      }
+      if (obj.element) {
+        (obj.element as HTMLElement).style.opacity = String(opacity);
+      }
+    });
+  };
+
+  const applyGroupOpacity = (group: THREE.Group, opacity: number) => {
+    group.traverse((obj: any) => {
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach((m: any) => {
+            if (m.userData?.baseOpacity === undefined) {
+              if (!m.userData) m.userData = {};
+              m.userData.baseOpacity = m.opacity ?? 1;
+            }
+            m.transparent = true;
+            m.opacity = (m.userData.baseOpacity ?? 1) * opacity;
+          });
+        } else {
+          if (obj.material.userData?.baseOpacity === undefined) {
+            if (!obj.material.userData) obj.material.userData = {};
+            obj.material.userData.baseOpacity = obj.material.opacity ?? 1;
+          }
+          obj.material.transparent = true;
+          obj.material.opacity = (obj.material.userData.baseOpacity ?? 1) * opacity;
+        }
+      }
+    });
+  };
   const disposeGroup = (group: THREE.Group | null) => {
     if (!group) return;
     group.traverse((obj: any) => {
@@ -200,6 +309,8 @@ const createGlowPathMaterial = () =>
     }
     labelObjects = [];
     activeLabelObject = null;
+    stopMarkerReveal();
+
     pulseMeshes = [];
     const boundaryEdgeMap = new Map<string, EdgeRecord>();
     regionMeshes = [];
@@ -210,6 +321,7 @@ const createGlowPathMaterial = () =>
     regionMeshMap = {};
     selectedRegionKey = null;
     selectedRegionMeshes = [];
+    updateLabelHighlight(null);
 
     // 使用 d3 将地理坐标投影到屏幕坐标系
     const projection = d3.geoMercator().fitSize([width *30, height * 30], geojson);
@@ -294,10 +406,9 @@ const createGlowPathMaterial = () =>
           }
           topGeometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
         }
-        const mapTexture = textureLoader.load(mapTextureUrl);
         const topMat = new THREE.MeshBasicMaterial({
           color: "rgb(29, 95, 162)",
-          map: mapTexture,
+          map: getMapTexture(),
           transparent: true,
           opacity: 0.95,
         });
@@ -430,6 +541,7 @@ const createGlowPathMaterial = () =>
       const heightScale = 0.55;
       const heightValue = Number(d.total ?? 0);
       const barHeight = (heightValue / maxVal) * 30 * heightScale + 2;
+      const markerBundle = new THREE.Group();
 
       // 数据柱：高度按比例映射
       const barGeo = new THREE.CylinderGeometry(2.8, 2.8, barHeight, 16, 1, false);
@@ -441,7 +553,7 @@ const createGlowPathMaterial = () =>
       const bar = new THREE.Mesh(barGeo, barMat);
       bar.rotation.x = Math.PI / 2;
       bar.position.set(projected[0], projected[1], barHeight / 2 + 2);
-      markerGroup?.add(bar);
+      markerBundle.add(bar);
 
       // 向上的光束，增强立体感
       const beamGeo = new THREE.CylinderGeometry(0.5, 0.5, barHeight + 24, 18, 1, true);
@@ -455,7 +567,7 @@ const createGlowPathMaterial = () =>
       const beam = new THREE.Mesh(beamGeo, beamMat);
       beam.rotation.x = Math.PI / 2;
       beam.position.set(projected[0], projected[1], (barHeight + 24) / 2 + 2);
-      markerGroup?.add(beam);
+      markerBundle.add(beam);
 
       // 圆环波纹，配合呼吸动画
       const ringGeo = new THREE.RingGeometry(7.8, 9.0, 64);
@@ -474,7 +586,7 @@ const createGlowPathMaterial = () =>
       const ring = new THREE.Mesh(ringGeo, ringMat);
       ring.position.set(projected[0], projected[1], 4.6);
       ring.renderOrder = 10;
-      markerGroup?.add(ring);
+      markerBundle.add(ring);
       pulseMeshes.push(ring);
 
       // 外层光晕圆环，更柔和
@@ -491,7 +603,7 @@ const createGlowPathMaterial = () =>
       const halo = new THREE.Mesh(haloGeo, haloMat);
       halo.position.set(projected[0], projected[1], 4.8);
       halo.renderOrder = 9;
-      markerGroup?.add(halo);
+      markerBundle.add(halo);
       pulseMeshes.push(halo);
 
       // 底部圆盘，稳定视觉中心
@@ -506,14 +618,14 @@ const createGlowPathMaterial = () =>
       const baseDisk = new THREE.Mesh(baseDiskGeo, baseDiskMat);
       baseDisk.position.set(projected[0], projected[1], 4.7);
       baseDisk.renderOrder = 11;
-      markerGroup?.add(baseDisk);
+      markerBundle.add(baseDisk);
 
       // 内核小球，增强亮点
       const coreGeo = new THREE.SphereGeometry(2.2, 16, 16);
       const coreMat = new THREE.MeshBasicMaterial({ color: "#7ffcff" });
       const core = new THREE.Mesh(coreGeo, coreMat);
       core.position.set(projected[0], projected[1], barHeight + 6);
-      markerGroup?.add(core);
+      markerBundle.add(core);
 
       // 构建标签的 DOM 结构，用 CSS2DRenderer 浮在三维场景上方
       const label = document.createElement("div");
@@ -522,7 +634,8 @@ const createGlowPathMaterial = () =>
       label.style.cursor = "pointer";
       const elevateLabel = (active: boolean) => {
         const el = label as HTMLDivElement;
-        if (active) {
+        const selected = el.dataset.selected === "true";
+        if (active || selected) {
           el.style.zIndex = "20";
           el.style.transform = "translateY(-2px)";
         } else {
@@ -559,8 +672,10 @@ const createGlowPathMaterial = () =>
       labelObj.position.set(projected[0], projected[1], barHeight + 58);
       labelObj.userData.basePosition = labelObj.position.clone();
       labelObj.userData.baseZ = labelObj.position.z;
-      markerGroup?.add(labelObj);
-      labelObjects.push(labelObj);
+      labelObj.userData.regionName = d.name ?? "";
+      markerBundle.add(labelObj);
+      markerBundle.userData.labelObj = labelObj;
+      markerRevealQueue.push(markerBundle);
     });
     
     scene.add(mapGroup);
@@ -574,6 +689,12 @@ const createGlowPathMaterial = () =>
     // Move map upward (adjust this offset as needed)
     mapGroup.position.y += 100;
     markerGroup.position.y += 100;
+    mapRevealFactor = 0;
+    mapRevealStart = null;
+    mapRevealPending = true;
+    mapRevealDelayFrames = 5;
+    applyGroupOpacity(mapGroup, 0);
+    startMarkerReveal();
   };
 
   // 容器尺寸变化时，重置相机并重新构建地图
@@ -658,6 +779,7 @@ const createGlowPathMaterial = () =>
     selectedRegionKey = key;
     selectedRegionMeshes = meshes;
     selectedRegionMeshes.forEach(applySelect);
+    updateLabelHighlight(selectedRegionKey);
   };
 
   // 清空选中：回到默认显示状态
@@ -666,6 +788,7 @@ const createGlowPathMaterial = () =>
     selectedRegionMeshes.forEach(clearSelect);
     selectedRegionKey = null;
     selectedRegionMeshes = [];
+    updateLabelHighlight(null);
   };
 
     // 查询当前指针是否在标签上，防止误触地图
@@ -772,23 +895,53 @@ const createGlowPathMaterial = () =>
   // 渲染循环：波纹及光晕呼吸效果
   const applyActiveLabelZ = () => {
     if (!labelRenderer) return;
-    // ????? hover ? label???????????
     if (activeLabelObject) {
       const el = activeLabelObject.element as HTMLElement;
       el.style.zIndex = "999";
     }
+    labelObjects.forEach((obj) => {
+      const el = obj.element as HTMLElement;
+      const selected = el.dataset.selected === "true";
+      if (selected) {
+        el.style.zIndex = "999";
+      }
+    });
   };
 
   const startRenderLoop = () => {
     const animate = (time: number) => {
+      if (mapRevealPending) {
+        mapRevealPending = false;
+    mapRevealDelayFrames = 0;
+        mapRevealStart = time;
+      }
       pulseMeshes.forEach((mesh, idx) => {
         const scale = 1 + Math.sin(time * 0.002 + idx) * 0.12;
         mesh.scale.set(scale, scale, scale);
       });
+      if (revealBundles.length) {
+        const fadeDuration = 450;
+        const keep: THREE.Object3D[] = [];
+        for (const bundle of revealBundles) {
+          const start = (bundle as any).userData?.revealStart as number | undefined;
+          if (!start) continue;
+          const t = Math.min(1, Math.max(0, (time - start) / fadeDuration));
+          applyBundleOpacity(bundle, t);
+          if (t < 1) keep.push(bundle);
+        }
+        revealBundles = keep;
+      }
+      if (mapRevealStart !== null && mapGroup) {
+        const duration = 700;
+        const t = Math.min(1, Math.max(0, (time - mapRevealStart) / duration));
+        mapRevealFactor = t;
+        applyGroupOpacity(mapGroup, t);
+        if (t >= 1) mapRevealStart = null;
+      }
       glowPathMaterials.forEach((mat, idx) => {
         const base = (mat as any).userData?.baseOpacity ?? 1;
         const breath = 0.92 + Math.sin(time * 0.0015 + idx) * 1.08;
-        mat.uniforms.uOpacity.value = base * breath;
+        mat.uniforms.uOpacity.value = base * breath * mapRevealFactor;
       });
       renderer?.render(scene!, camera!);
       labelRenderer?.render(scene!, camera!);
@@ -815,7 +968,7 @@ const createGlowPathMaterial = () =>
     camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(width, height);
 
     labelRenderer = new CSS2DRenderer();
@@ -873,6 +1026,7 @@ const createGlowPathMaterial = () =>
   // 释放资源：清理事件、渲染器和几何/材质
   const dispose = () => {
     cancelAnimationFrame(animationId);
+    stopMarkerReveal();
     if (renderer?.domElement) {
       renderer.domElement.removeEventListener("click", onCanvasClick);
       renderer.domElement.removeEventListener("mousemove", onCanvasMove);
@@ -892,6 +1046,8 @@ const createGlowPathMaterial = () =>
     }
 
     renderer?.dispose();
+    mapTexture?.dispose();
+    mapTexture = null;
     renderer = null;
     labelRenderer = null;
     controls?.dispose();
@@ -908,6 +1064,11 @@ const createGlowPathMaterial = () =>
     regionMeshMap = {};
     selectedRegionKey = null;
     selectedRegionMeshes = [];
+    updateLabelHighlight(null);
+    mapRevealStart = null;
+    mapRevealFactor = 1;
+    mapRevealPending = false;
+    mapRevealDelayFrames = 0;
     lastGeojson = null;
     lastData = [];
   };
