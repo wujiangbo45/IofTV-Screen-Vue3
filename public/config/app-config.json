@@ -1,0 +1,8 @@
+{
+  "title": "保险核算统计大屏",
+  "homeUrl": "/",
+  "backMainUrl": "/",
+  "dateFormat": "YYYY-MM-DD",
+  "timeFormat": "HH:mm:ss",
+  "weekdayLabels": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+}

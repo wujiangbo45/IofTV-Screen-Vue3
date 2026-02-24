@@ -1,9 +1,9 @@
 ﻿<script setup lang="ts">
-import { onBeforeUnmount, reactive } from "vue";
-import { useRouter } from "vue-router";
+import { computed, onBeforeUnmount, reactive } from "vue";
 import dayjs from "dayjs";
 import type { DateDataType } from "./index.d";
 import { useSettingStore } from "@/stores/index";
+import { loadAppConfig, getDefaultAppConfig, type AppConfig } from "@/config/app-config";
 
 const dateData = reactive<DateDataType>({
   dateDay: "",
@@ -13,13 +13,21 @@ const dateData = reactive<DateDataType>({
 });
 
 const { setSettingShow } = useSettingStore();
-const router = useRouter();
-const weekday = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const headerConfig = reactive<AppConfig>(getDefaultAppConfig());
+const defaultWeekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const weekday = computed(() =>
+  headerConfig.weekdayLabels && headerConfig.weekdayLabels.length >= 7 ? headerConfig.weekdayLabels : defaultWeekdays
+);
+const dateFormat = computed(() => headerConfig.dateFormat ?? "YYYY-MM-DD");
+const timeFormat = computed(() => headerConfig.timeFormat ?? "HH:mm:ss");
+const titleText = computed(() => headerConfig.title ?? "保险核算统计大屏");
+const homeUrl = computed(() => headerConfig.homeUrl ?? "/");
+const backMainUrl = computed(() => headerConfig.backMainUrl ?? homeUrl.value);
 
 const updateTime = () => {
-  dateData.dateYear = dayjs().format("YYYY-MM-DD");
-  dateData.dateDay = dayjs().format("HH:mm:ss");
-  dateData.dateWeek = weekday[dayjs().day()];
+  dateData.dateYear = dayjs().format(dateFormat.value);
+  dateData.dateDay = dayjs().format(timeFormat.value);
+  dateData.dateWeek = weekday.value[dayjs().day()];
 };
 
 const timeFn = () => {
@@ -29,9 +37,23 @@ const timeFn = () => {
 
 timeFn();
 
+const fetchConfig = async () => {
+  const remote = await loadAppConfig();
+  Object.assign(headerConfig, remote);
+  updateTime();
+};
+
+fetchConfig().catch(() => {
+  // loadAppConfig already logs in dev mode
+});
+
 onBeforeUnmount(() => {
   if (dateData.timing) clearInterval(dateData.timing);
 });
+
+const backMain = () => {
+  window.location.href = backMainUrl.value;
+};
 </script>
 
 
@@ -74,11 +96,11 @@ onBeforeUnmount(() => {
     <div class="guang"></div>
     <div class="d-flex jc-center">
       <div class="title">
-        <span class="title-text">保险核算统计大屏</span>
+        <span class="title-text">{{ titleText }}</span>
       </div>
     </div>
     <div class="timers">
-      <div class="home_icon" title="返回系统" @click="router.push('/')">
+      <div class="home_icon" title="返回系统" @click="backMain()">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3.5 3 11h2v8h5v-5h4v5h5v-8h2L12 3.5z" fill="currentColor" />
         </svg>

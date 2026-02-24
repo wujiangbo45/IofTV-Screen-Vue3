@@ -40,6 +40,13 @@ export default defineConfig(({ command, mode }: ConfigEnv): UserConfig => {
         "api": resolve(__dirname, "./src/api"),
       },
     },
+    optimizeDeps: {
+      // OrbitControls/CSS2DRenderer rely on browser globals and often break esbuild pre-bundling
+      exclude: [
+        'three/examples/jsm/controls/OrbitControls.js',
+        'three/examples/jsm/renderers/CSS2DRenderer.js',
+      ]
+    },
     css: {
       // css预处理器
       preprocessorOptions: {
